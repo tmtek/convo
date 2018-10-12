@@ -1,0 +1,14 @@
+{
+  "name": "@tmtek/convo",
+  "version": "0.0.1",
+  "description": "A uility for building conversational responses in DialogFlow fufillments",
+  "main": "index.js",
+  "scripts": {
+    "test": ""
+  },
+  "author": "tmtek",
+  "license": "ISC",
+  "dependencies": {
+    "actions-on-google": "^2.4.1"
+  }
+}
