@@ -2,6 +2,10 @@
 
 A javascript library for building, testing and deploying DialogFlow fulfillments easily.
 
+## Installation
+
+`npm i @tmtek/convo`
+
 ## The Basics
 
 Here is basic Hello World example of a Convo response:
