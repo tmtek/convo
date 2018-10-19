@@ -100,10 +100,6 @@ class Convo {
 		return this.processMethod('Button', obj);
 	}
 
-	static isNotEmpty(str) {
-		return str && str.trim() !== '';
-	}
-
 	static complete(convo, action = 'close', options = { log: false, logFunc: null }) {
 		if (!convo.conv){
 			if (options.log) {
