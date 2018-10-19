@@ -207,9 +207,9 @@ class Convo {
 	}
 
 	/**
- * Guaranteen that func returns a promise
- * @param {Function} func
- */
+	 * Guarantee that func returns a promise
+	 * @param {Function} func
+	 */
 	promise(func) {
 		return Promise.resolve().then(() => func(this) );
 	}
@@ -286,4 +286,4 @@ class ConvoApp {
 }
 
 
-module.exports = { Say, Convo, ConvoApp };
+module.exports = { Convo, ConvoApp, Say };
