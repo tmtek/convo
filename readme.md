@@ -1,52 +1,189 @@
 # Convo
 
-A javascript library for building, testing and deploying DialogFlow fulfillments easily.
+Convo is a javascript library for building, testing and deploying conversational fulfillments for [DialogFlow](https://dialogflow.com/). Convo allows you to build and test a complete application as a simple Node project, then bind that same application to a DialogFlow app in a fulfillment for testing in the production enviornment.
 
-## Installation
+Convo separates your working application's code completely from all DialogFlow dependencies and scaffolding so that you can develop and test with maximum freedom and agility.
+
+### Installation
 
 `npm i @tmtek/convo`
 
-## The Basics
+## Convo App
 
-Here is basic Hello World example of a Convo response:
+Convo applications require you to encapsulate your DialogFlow intent callbacks in a class wrapper that facilitates their execution outside of the DialogFlow scaffolding:
+
+```javascript
+const {ConvoApp, Convo} = require(`@tmtek/convo`);
+
+//Define your Convo application:
+class MyApplication extends ConvoApp {
+	//Register all of your DialogFlow intents:
+	onRegisterIntents() {
+		this.registerIntent('welcome', (convo, params, option, debug) => {
+			return Convo.ask(convo.speak("Welcome to my application!"), debug);
+		});
+	}
+}
+
+//Instantiate you application for test:
+new MyApplication()
+  //Simulate user triggering your welcome intent:
+  .intent(new Convo(), 'welcome', null, null, {log:true});
 
 ```
+
+The advantage here is that I can run and test my application by simply executing this application with Node.
+
+### DialogFlow Fulfillment
+
+The application shown above can be published into a DialogFlow fulfillment by simply requiring the ConvoApp subclass you created in the fulfillment, and then binding it to the DialogFlow app as shown:
+
+
+```javascript
+'use strict';
+
+const { dialogflow, SimpleResponse} = require('actions-on-google');
+const functions = require('firebase-functions');
+const {MyApplication} = require('myapplication');
+
+exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
+  new MyApplication()
+    .setClassMappings({
+      SimpleResponse: obj => new SimpleResponse(obj)
+    })
+    .bind(dialogflow({debug: true}))
+);
+```
+
+## Responding with Convo
+
+The core of the Convo library is the `Convo` class used to compose responses to the user's intents. Convo wraps DialogFlow's `conv` object, simulates all of it's capabilities outside of the DialogFlow scaffolding, and also provides simpler methods to compose complex responses.
+
+Here is an illustration of it's basic use:
+
+```javascript
 Convo.ask(new Convo()
-	.write("Hello World in writing.")
-	.speak("Saying Hello World!", false)
-	.present(
-		Convo.BasicCard({title:"Hello World on a Card."}),
-		'actions.capability.SCREEN_OUTPUT'
-	)
+    .write("Hello World in writing.")
+    .speak("Saying Hello World!", false)
+    .present(
+        Convo.BasicCard({title:"Hello World on a Card."}),
+        'actions.capability.SCREEN_OUTPUT'
+    )
 )
+``` 
+
+This response will do the following things when returned from a registered intent in a `ConvoApp`:
+
+* Speak the phrase: "Saying Hello World!"
+* Print the text : "Hello World in writing." on the screen only if a screen is present.
+* Display a Card on screen that has the title "Hello World on a Card." only if a screen is present.
+
+
+Convo compiles all of the response information you apply to it into one response that it sends to DailogFlow for presentation to the end user. This is helpful because the standard `conv` object in DialogFlow can get confused when you are responding with multiple responses (text, speech and rich UI) and sometimes throw errors if you do not send them in the right order. Convo will take care of all of the required order of operations for you.
+
+
+### Responding to an intent:
+
+Convo responses will always be composed and returned in response to an intent registered in your `ConvoApp`:
+
+```javascript
+this.registerIntent('welcome', (convo, params, option, debug) => {
+	return Convo.ask(convo.speak("Welcome to my application!"), debug);
+});
+``` 
+
+A response must ALWAYS return the result of either `Convo.ask(convo)` or `Convo.close(convo)`, but you are free to decorate your convo instance in whatever way you need to.
+
+### Async Operations for a Convo Response:
+
+Convo instances have a `.promise()` method that allow you to perform async work and apply that result to the existing convo object:
+
+```javascript
+this.registerIntent('welcome', (convo, params, option, debug) => {
+	return Convo.ask(
+		convo.speak("Welcome to my application!")
+			.promise(() => 
+				someAsyncThing()
+				.then(response => 
+					convo.speak(`Hey I found this:${response}`)
+				)
+			), 
+		debug
+	);
+});
+``` 
+
+`Convo.ask()` and `Convo.close()` will ensure that all work is completed on a Convo object before it submits itself to DialogFlow as a response.
+
+
+## Development and Testing
+
+When building your ConvoApp in a simple Node project, you can specify debug options to produce console output you can view for responses from all of your intents:
+
+```javascript
+new MyApplication()
+	.intent(new Convo(), 'welcome', null, null, {log:true});
+
 ```
+The `intent()` method of a ConvoApp allows you to simulate a call of an intent exactly as DialogFlow would trigger it. You may supply your own params (third argument) and options (fourth argument) if you desire.
 
-This response will do the following things when returned in a DialogFlow application:
+The fifth argument is the `debugOptions`. This is unique to ConvoApp, and it allows you to generate console output for the response to the intent so you can see what's going on in development. When running in DailogFlow, debugOptions will always be null and not generate any output.
 
-1. Speak the phrase: "Saying Hello World!"
-2. Print the text : "Hello World in writing." on the screen only if a screen is present.
-3. Display a Card on screen that has the title "Hello World on a Card." only if a screen is present.
+Here is what a debugOptions object offers:
 
-Convo compiles all of the response information you apply to it into one response that it sends to DailogFlow for presentation to the end user.
+```javascript
+{
+	log:true,
+	logFunc:(action, response) => {}
+}
 
-## Convo API
+```
+If `log` is set to true, then the complete response object is reported in the console.
 
-### Actions:
+You may also supply an optional `logFunc` function, that can do anything you need to do with the response when it arrives. This could be useful for automated functional tests.
+
+### Simulating Conversations:
+`ConvoApp.intent()` allows us to simulate the invocation of intent, but it also returns a promise that can be used to simulate conversations with the end user:
+
+```javascript 
+new MyApplication()
+	.intent(new Convo(), 'welcome', null, null, {log:true})
+	.then(({app, convo}) => 
+		app.intent(new Convo(convo), 'secondintent', null, null, {log:true})
+	)
+	.then(({app, convo}) => 
+		app.intent(new Convo(convo), 'thirdintent', null, null, {log:true})
+	);
+
+```
+We use`then()` of the resulting promises returned from `intent()` to simulate the multiple conversation steps. Notice how for each intent call we create a new instance of Convo derived from the previous: `new Convo(convo)`. This allows us to create a new response for each intent, but still carry over the context and storage data to simulate how things work in DialogFlow with a standard `conv` object.
+
+
+## API Reference
+
+### ConvoApp
+
+* ConvoApp.setClassMappings(mappings);
+* onRegisterIntents();
+* registerIntent(intent, intentHandler);
+* intent(convo, intent, params, option, debugOptions);
+* bind(dialogflowapp);
+
+### Convo
+
 * Convo.ask(convo, debugOptions)
 * Convo.close(convo, debugOptions)
+* write(text)
+* speak(text, alsoWrite = true)
+* present(media, capabilities, send)
+* promise(convo => {})
+* clear()
+* setAccessToken(token)
+* setConext(contextName, lifespan, value)
+* getContext(contextName)
+* getStorage()
 
-### Methods:
-* convo.write(text)
-* convo.speak(text, alsoWrite = true)
-* convo.present(media, capabilities, send)
-* convo.promise(convo => {})
-* convo.clear()
-* convo.setAccessToken(token)
-* convo.setConext(contextName, lifespan, value)
-* convo.getContext(contextName)
-* convo.getStorage()
-
-### Rich Responses:
+#### Convo Rich Responses
 * Convo.SimpleResponse()
 * Convo.BasicCard()
 * Convo.List()
@@ -55,203 +192,4 @@ Convo compiles all of the response information you apply to it into one response
 * Convo.NewSurface()
 * Convo.SignIn()
 
-### Config:
-* Convo.setClassMappings(mappings)
 
-## Development and Testing
-
-Convo allows you take your application development out of the DialogFlow inline editor, and into your local enviornment to speed development up.
-
-In a new Node Project, import Convo, and start composing Responses and testing them freely.
-
-By specifying running the following in Node:
-
-```
-Convo.ask(
-	new Convo().speak("How are you today?"),
-	{log:true}
-)
-```
-
-You will see this console output:
-
-```
-ask:{
- "type": "SimpleResponse",
- "data": {
-  "text": "How are you today?",
-  "speech": "How are you today?"
- }
-}
-```
-
-The JSON above is a representation of the response data that will be sent to DialogFlow when this is running in a DialogFlow fulfillment.
-
-### Debug Options
-
-The DebugOptions object is a second argument you can supply to `Convo.ask()` or `Convo.close()`. It is only used while developing and testing applications.
-
-```
-{
-	log:true,
-	logFunc: (action, obj) => {}
-}
-
-```
-* **log:** If log is set to true, the object being submitted to DialogFlow as a result of this ask or close will be printed as JSON.
-* **logFunc:**  OPtionally supply your own function to log the object being debugged.
-
-
-
-### Promises
-
-Use the `promise()` method of Convo to build your response asyncronously. This method keeps your responses easy to read when a lot has to be done to build the response:
-
-```
-Convo.ask(
-	new Convo().speak("How are you today?")
-	.promise(convo => 
-		asyncThing()
-		.then(response => convo.speak(`I have this for you: ${response}`))
-	)
-)
-
-```
-
-Because `promise()` returns a promise, chained async operations will have to leverage `then()`:
-
-```
-Convo.ask(
-	new Convo().speak("statement 1")
-	.promise(convo => Promise.resolve("data")
-		.then(response => 
-			convo.speak(`statement 2 ${response}`)
-		)
-	)
-	.then(convo => 
-		convo.speak("statement 3")
-	)
-)
-
-```
-
-### Simulating Conversations
-
-Many application interactions are comprised of a series of requests from the user. Convo supports simulating this by having the value returned from `Convo.ask()` be a Promise:
-
-```
-//User starts your application, and you respond:
-Convo.ask(new Convo().speak("Welcome to my application!"))
-
-//User asks for your favorite color:
-.then(convo => 
-	Convo.ask(new Convo(convo))
-		.speak("my favorite color is red.")
-		.speak("What is your favorite color?")
-	)
-)
-//User responds with "blue":
-.then(convo => 
-	let color = "blue";
-	Convo.close(new Convo(convo))
-		.speak(`${color} is an amazing choice!`)
-	)
-)
-
-```
-
-This simulation capability is only for designing tests for your application outside of the DialogFlow enviornment. It allows you to simulate the flow in a controlled way, while carrying context through an interaction.
-
-#### Designing your code in preparation for DialogFlow
-
-Consider the following adaptation of the example above:
-
-
-```
-const MyApplication = {
-	welcome: function(convo) {
-		return convo
-			.speak("Welcome to my application!");
-	},
-	myFavColor: function(convo) {
-		return convo
-			.speak("my favorite color is red.")
-			.speak("What is your favorite color?");
-	},
-	yourFavColor: function(convo, color) {
-		return convo
-			.speak(`${color} is an amazing choice!`);
-	}
-}
-
-
-//User starts your application, and you respond:
-Convo.ask(MyApplication.welcome(new Convo()))
-
-//User asks for your favorite color:
-.then(convo => 
-	Convo.ask(MyApplication.myFavColor(new Convo(convo)))
-)
-
-//User responds with "blue":
-.then(convo => 
-	Convo.close(MyApplication.yourFavColor(new Convo(convo), "blue"))
-)
-
-```
-
-## Implementing a DialogFlow Fulfillment
-
-When moving your code over to a DialogFlow fulfillment, all you need to know is that you must return the result of your `Convo.ask()` or `Convo.close()` function to the `app.intent()` function you are handling.
-
-```
-app.intent('my_intent', (conv, {yourParam}) => {
-	return Convo.ask(new Convo(conv)
-		.speak(`Your Param was ${yourParam}`)
-	);
-});
-
-```
-
-#### A Complete DialogFlow app:
-
-If we were to map out a DialogFlow implementation of the app from the previous section, you would end up with something like this:
-
-```
-const {dialogflow} = require('actions-on-google');
-const functions = require('firebase-functions');
-const app = dialogflow({debug: true});
-const {Convo} = require('@tmtek/convo');
-
-const MyApplication = {
-	welcome: function(convo) {
-		return convo
-			.speak("Welcome to my application!");
-	},
-	myFavColor: function(convo) {
-		return convo
-			.speak("my favorite color is red.")
-			.speak("What is your favorite color?.");
-	},
-	yourFavColor: function(convo, color) {
-		return convo
-			.speak(`${color} is an amazing choice!`);
-	}
-}
-
-
-app.intent('welcome', (conv) => {
-	return Convo.ask(MyApplication.welcome(new Convo(conv)));
-});
-
-app.intent('my_fav_color', (conv) => {
-	return Convo.ask(MyApplication.myFavColor(new Convo(conv)));
-});
-
-app.intent('your_fav_color', (conv, {color}) => {
-	return Convo.close(MyApplication.yourFavColor(new Convo(conv), color));
-});
-
-exports.dialogflowFirebaseFulfillment = functions.https.onRequest(app);
-
-```

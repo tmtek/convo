@@ -1,6 +1,6 @@
 {
   "name": "@tmtek/convo",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "A uility for building conversational responses in DialogFlow fufillments",
   "main": "index.js",
   "scripts": {
@@ -8,5 +8,6 @@
   },
   "author": "tmtek",
   "license": "ISC",
-  "dependencies": {}
+  "dependencies": {},
+  "keywords": ["DialogFlow","fulfillment","Google Assistant"]
 }
