@@ -142,8 +142,16 @@ class Convo {
 	}
 
 	constructor(obj) {
-		this.conv = !obj ? Convo.mockConv() : obj.conv || obj;
+		this.conv = !obj ? Convo.mockConv() : copyConvo(obj);
 		this.clear();
+	}
+
+	copyConvo(obj) {
+		if (obj.conv) {
+			this_onStorageUpdated = obj._onStorageUpdated;
+			return obj.conv;
+		}
+		return obj;
 	}
 
 	clear() {
@@ -213,6 +221,42 @@ class Convo {
 	getStorage() {
 		return this.conv && this.conv.user && this.conv.user.storage || {};
 	}
+
+	setStorage(data) {
+		if (this.conv && this.conv.user) {
+			this.conv.user.storage = data;
+		}
+		return this;
+	}
+
+	setToStorage(name, value) {
+		if (this.conv && this.conv.user && this.conv.user.storage) {
+			this.conv.user.storage[name] = value;
+			if(this._onStorageUpdated) {this._onStorageUpdated(this.conv.user.storage)};
+		}
+		return this;
+	}
+
+	onStorageUpdated(callback) {
+		this._onStorageUpdated = callback;
+		return this;
+	}
+
+	getFromStorage(name) {
+		if (this.conv && this.conv.user && this.conv.user.storage) {
+			return this.conv.user.storage[name];
+		}
+		return null;
+	}
+
+	isInStorage(name, predicate = null) {
+		return this.conv &&
+		this.conv.user &&
+		this.conv.user.storage &&
+		this.conv.user.storage[name] &&
+		(!predicate || predicate(this.conv.user.storage[name]));
+	}
+
 }
 
 function isPromise(obj) {

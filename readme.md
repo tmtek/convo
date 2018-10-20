@@ -158,6 +158,26 @@ new MyApplication()
 ```
 We use`then()` of the resulting promises returned from `intent()` to simulate the multiple conversation steps. Notice how for each intent call we create a new instance of Convo derived from the previous: `new Convo(convo)`. This allows us to create a new response for each intent, but still carry over the context and storage data to simulate how things work in DialogFlow with a standard `conv` object.
 
+### Using Storage
+
+Convo allows you to simulate DialogFlow's storage capabilities. Storage lets you store arbitrary data for the user that is accessible across sessions of usage. Convo offers methods to simply interaction with storage, but to also simulate it in the dev/test environment.
+
+```javascript
+let convo = new Convo()
+	.onStorageUpdated(storage => {console.log(storage)}) //fires after setToStorage call.
+	.setStorage({}) //populates storage with data (doesn't trigger onStorageUpdated).
+	.setToStorage("list", ["one","two","three"]); //Add value to storage.
+
+convo.isInStorage("list", list => list.length > 0); //returns true
+convo.getFromStorage("list"); //returns ["one","two","three"]
+
+```
+
+`setToStorage()`, `getFromStorage()`, and `isInStorage()` will be the methods that are most commonly used in application development.
+
+`onStorageUpdated()` and `setStorage()` are useful when testing your application outside of DialogFlow, because you can use those methods to simulate persisted data, or actually persist it yourself.
+
+
 
 ## API Reference
 
@@ -182,6 +202,10 @@ We use`then()` of the resulting promises returned from `intent()` to simulate th
 * setConext(contextName, lifespan, value)
 * getContext(contextName)
 * getStorage()
+* setStorage(data)
+* setToStorage(name, data)
+* getFromStorage(name)
+* isInStorage(name, predicate)
 
 #### Convo Rich Responses
 * Convo.SimpleResponse()
