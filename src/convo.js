@@ -142,13 +142,13 @@ class Convo {
 	}
 
 	constructor(obj) {
-		this.conv = !obj ? Convo.mockConv() : copyConvo(obj);
+		this.conv = !obj ? Convo.mockConv() : this.copyConvo(obj);
 		this.clear();
 	}
 
 	copyConvo(obj) {
 		if (obj.conv) {
-			this_onStorageUpdated = obj._onStorageUpdated;
+			this._onStorageUpdated = obj._onStorageUpdated;
 			return obj.conv;
 		}
 		return obj;
