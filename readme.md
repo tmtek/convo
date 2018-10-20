@@ -177,6 +177,20 @@ convo.getFromStorage("list"); //returns ["one","two","three"]
 
 `onStorageUpdated()` and `setStorage()` are useful when testing your application outside of DialogFlow, because you can use those methods to simulate persisted data, or actually persist it yourself.
 
+#### ConvoStorage
+
+There is a utility included with Convo that you can use to create a Convo object that has it's storage populated from a json file and will also write any changes made to storage to that file:
+
+```javascript
+const {ConvoStorage} = require('@tmtek/convo');
+
+new ConvoStorage("storage.json").load(storageConvo => {
+	new YourApp().intent(storageConvo, 'welcome', null, null, {log:true});
+});
+```
+
+The ConvoStorage class allows you to specify a json file to load your data from. Then you call `load(convo=> {})` to get a Convo object generated for that storage data. If your application uses `setToStorage()` thereafter, the data will be automatically saved to that json file.
+
 
 
 ## API Reference
