@@ -7,7 +7,7 @@
     "test": "eslint *.js src"
   },
   "author": "tmtek",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {},
   "keywords": [
     "DialogFlow",
