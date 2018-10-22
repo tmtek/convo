@@ -232,7 +232,7 @@ class Convo {
 	setToStorage(name, value) {
 		if (this.conv && this.conv.user && this.conv.user.storage) {
 			this.conv.user.storage[name] = value;
-			if(this._onStorageUpdated) {this._onStorageUpdated(this.conv.user.storage)};
+			if (this._onStorageUpdated) {this._onStorageUpdated(this.conv.user.storage);}
 		}
 		return this;
 	}
@@ -255,6 +255,148 @@ class Convo {
 		this.conv.user.storage &&
 		this.conv.user.storage[name] &&
 		(!predicate || predicate(this.conv.user.storage[name]));
+	}
+
+	setList(type, list, paging = { start: 0, count: -1 }){
+		this.setContext('list', 1, {
+			type,
+			list,
+			paging,
+			selectedIndex: -1
+		});
+		return this;
+	}
+
+	clearList() {
+		this.setContext('list', 0, null);
+		return this;
+	}
+
+	hasList() {
+		return this.getContext('list') && this.getContext('list').list;
+	}
+
+	updateListPaging(paging = { start: 0, count: -1 }){
+		if (this.hasList()){
+			this.getContext('list').paging = paging;
+		}
+		return this;
+	}
+
+	nextListPage(count = -1){
+		let listContext = this.getContext('list');
+		let newCount = count === -1 ? listContext.paging.count : count;
+		let newIndex = listContext.paging.start + listContext.paging.count;
+		if (newIndex >= listContext.list.length || newIndex < 0) {
+			newIndex = 0;
+		}
+		this.updateListPaging({
+			start: newIndex,
+			count: newCount
+		});
+		return this;
+	}
+
+	prevListPage(count = -1){
+		let listContext = this.getContext('list');
+		let newCount = count === -1 ? listContext.paging.count : count;
+		let newIndex = 0;
+		if (listContext.paging.start <= 0) {
+			newIndex = listContext.list.length - newCount;
+		}
+		else {
+			newIndex = listContext.paging.start - listContext.paging.count;
+			if (newIndex < 0) {
+				newIndex = 0;
+			}
+		}
+		this.updateListPaging({
+			start: newIndex,
+			count: newCount
+		});
+		return this;
+	}
+
+	forListPage(func) {
+		if (this.hasList()){
+			let listContext = this.getContext('list');
+			let paging = listContext.paging;
+			let count = paging.count < 0 ? listContext.list.length : paging.count;
+			let page = listContext.list.slice(paging.start, Math.min(paging.start + count, listContext.list.length));
+			func({ convo: this, page, list: listContext.list, type: listContext.type });
+		}
+		else {
+			func({ convo: this });
+		}
+		return this;
+	}
+
+	selectFromList(index = 0){
+		this.getContext('list').selectedIndex = index;
+		return this;
+	}
+
+	selectFromListByQuery(query, findTextFunc = (item) => item){
+		return this.forList(({ list }) => {
+			let testedItems = list.map(item => {
+				let test =  new RegExp(query.toLowerCase()).test(findTextFunc(item).toLowerCase());
+				return test;
+			});
+			for (let i = 0; i<  testedItems.length; i++) {
+				if (testedItems[i]) {
+					this.selectFromList(i);
+					break;
+				}
+			}
+		});
+	}
+
+	forList(func){
+		if (this.hasList()){
+			let listContext = this.getContext('list');
+			func({ convo: this, list: listContext.list, type: listContext.type });
+		}
+		else {
+			func({ convo: this });
+		}
+		return this;
+	}
+
+	clearListSelected() {
+		this.getContext('list').selectedIndex = -1;
+		return this;
+	}
+
+	selectFromListPage(index = 0){
+		let listContext = this.getContext('list');
+		listContext.selectedIndex = listContext.paging.start + index;
+		return this;
+	}
+
+	hasListSelected() {
+		let listContext = this.getContext('list');
+		return listContext && listContext.list && listContext.selectedIndex > -1;
+	}
+
+	forListSelected(func) {
+		let listContext = this.getContext('list');
+		let item = listContext.list[listContext.selectedIndex];
+		func({ convo: this, item, type: listContext.type });
+		return this;
+	}
+
+	selectNextFromList(){
+		let listContext = this.getContext('list');
+		listContext.selectedIndex = listContext.selectedIndex + 1 >= listContext.list.length ?
+			0 : listContext.selectedIndex + 1;
+		return this;
+	}
+
+	selectPrevFromList(){
+		let listContext = this.getContext('list');
+		listContext.selectedIndex =listContext.selectedIndex -1 < 0 ?
+			listContext.list.length -1 : listContext.selectedIndex -1;
+		return this;
 	}
 
 }
