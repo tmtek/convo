@@ -371,7 +371,7 @@ let list = [
 
 Convo.ask(new Convo()
 	.speak("Here's your list:")
-	.setList(list, { start: 0, count: 3 })
+	.setList("general", list, { start: 0, count: 3 })
 	.forListPage(({ convo, page }) => {
 		page.forEach(item => {
 			convo.speak(item);
@@ -385,7 +385,9 @@ Convo.ask(new Convo()
 
 `convo.setList()` can be called at any time to have convo start managing a list for presentation. The full signature of the method is:
 
-`setList(items, paging = { start:0, count:5 }, listType = 'defaultlist')`
+`setList(type, items, paging = { start:0, count:5 }, listType = 'defaultlist')`
+
+**type**: An identifier use to distinguish this list from others. When rendering a list, or list items, this type parameter can be used to figure out how to render the items.
 
 **items**: An array of objects that you want to start managing as the list to be presented to the user.
 
@@ -421,4 +423,30 @@ There are other methods you can use to control the state of the list:
 
 ### Selecting Items from a List:
 
+* selectFromListPage(index = 0)
+* getListSelection()
+* forListSelection(listSelectionData => {})
+* clearListSelection()
+* hasListSelection()
+* selectNextFromList()
+* selectPrevFromList()
+
+### ConvoApp List Implementation
+
+```
+class MyApplication extends ConvoApp {
+
+	onRespondForList({ convo, type, page, list }) {
+		return convo;
+	}
+
+	onRespondForListSelection({ convo, type, item }) {
+		return convo;
+	}
+
+	onRegisterIntents() {
+		this.registerListIntents();
+	}
+}
+```
 

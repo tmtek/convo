@@ -1,95 +1,54 @@
-const { Convo, ConvoApp } = require(`./index`);
+const { Convo, ConvoApp, Say } = require(`./index`);
 
 
 class MyApplication extends ConvoApp {
 
+	onRespondForList({ convo, type, page, list }) {
+		if (type === 'channel') {
+			return convo.speak(Say.listPageResponse(page, list, item => item.display_name));
+		}
+		return convo.speak('Not sure what these are.');
+
+	}
+
+	onRespondForListSelection({ convo, type, item }) {
+		if (type === 'channel') {
+			return convo.speak(`Selected item: ${item.display_name}`);
+		}
+		return convo.speak('Not sure what this is');
+	}
+
 	onRegisterIntents() {
 
-		let responseToList = listData => {
-			if (!listData.list) {
-				return listData.convo.speak('The list is empty.');
-			}
-			listData.convo.speak(listData.page.map(item => item.display_name).join(','));
-			if (listData.page.length < listData.list.length){
-				listData.convo.speak(`and ${listData.list.length - listData.page.length} others.`);
-			}
-		};
-
-		let responseToItem = ({ convo, item }) => {
-			convo.speak(`Selected item: ${item.display_name}`);
-		};
+		this.registerListIntents();
 
 		this.registerIntent('welcome', (convo, params, option, debug) => {
 			let list = [
 				{ display_name: 'KingGothalion' },
 				{ display_name: 'Ninja' },
-				{ display_name: 'professorbroman' },
-				{ display_name: 'tmtek' }
+				{ display_name: 'professorbroman' }
 			];
 			return Convo.ask(
 				convo.speak("Here's your list:")
-					.setList('general', list, { start: 0, count: 3 })
-					.forListPage(responseToList),
+					.setList('channel', list, { start: 0, count: 5 })
+					.forListPage(this.onRespondForList),
 				debug
 			);
 		});
-
-		this.registerIntent('list_clear', (convo, params, option, debug) => Convo.ask(
-			convo
-				.clearList()
-				.speak('Cleared the list.'),
-			debug
-		));
-
-		this.registerIntent('list_next', (convo, params, option, debug) => Convo.ask(
-			convo
-				.nextListPage(params ? params.count : -1)
-				.forListPage(responseToList),
-			debug
-		));
-
-		this.registerIntent('list_prev', (convo, params, option, debug) => Convo.ask(
-			convo
-				.prevListPage(params ? params.count : -1)
-				.forListPage(responseToList),
-			debug
-		));
-
-		this.registerIntent('list_all', (convo, params, option, debug) => Convo.ask(convo
-			.updateListPaging({ start: 0, count: -1 })
-			.forListPage(responseToList),debug));
-
-		this.registerIntent('list_select', (convo, { index }, option, debug) => Convo.ask(convo
-			.selectFromListPage(index)
-			.forListSelected(responseToItem), debug
-		));
-
-		this.registerIntent('list_find', (convo, { query }, option, debug) => Convo.ask(convo
-			.selectFromListByQuery(query, (item) => item.display_name)
-			.forListSelected(responseToItem), debug
-		));
-
-		this.registerIntent('list_select_next', (convo, params, option, debug) => Convo.ask(
-			convo
-				.selectNextFromList()
-				.forListSelected(responseToItem),
-			debug)
-		);
-
-		this.registerIntent('list_select_prev', (convo, params, option, debug) => Convo.ask(
-			convo
-				.selectPrevFromList()
-				.forListSelected(responseToItem),
-			debug));
 	}
 }
 
 new MyApplication()
 	.intent(new Convo(), 'welcome', null, null, { log: true })
-	.then(({ app,convo }) => app.intent(new Convo(convo), 'list_find', { query: 'bro' }, null, { log: true }))
+	.then(({ app,convo }) => app.intent(new Convo(convo), 'list_next', null, null, { log: true }))
+	.then(({ app,convo }) => app.intent(new Convo(convo), 'list_next', null, null, { log: true }));
+
+/*
+	.then(({ app,convo }) => app.intent(new Convo(convo), 'list_find', { query: 'king' }, null, { log: true }))
 	.then(({ app,convo }) => app.intent(new Convo(convo), 'list_select_next', null, null, { log: true }))
 	.then(({ app,convo }) => app.intent(new Convo(convo), 'list_select_next', null, null, { log: true }))
 	.then(({ app,convo }) => app.intent(new Convo(convo), 'list_select_next', null, null, { log: true }));
+	*/
 
 /*
 	.then(({ app,convo }) => app.intent(new Convo(convo), 'list_next', null, null, { log: true }))

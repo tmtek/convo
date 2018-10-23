@@ -268,6 +268,7 @@ class Convo {
 	}
 
 	clearList() {
+		this.clearListSelection();
 		this.setContext('list', 0, null);
 		return this;
 	}
@@ -332,7 +333,9 @@ class Convo {
 	}
 
 	selectFromList(index = 0){
-		this.getContext('list').selectedIndex = index;
+		let listContext = this.getContext('list');
+		listContext.selectedIndex = index;
+		this.setContext(`list_select_${listContext.type}`, 1, { active: true });
 		return this;
 	}
 
@@ -362,41 +365,48 @@ class Convo {
 		return this;
 	}
 
-	clearListSelected() {
-		this.getContext('list').selectedIndex = -1;
+	clearListSelection() {
+		let listContext = this.getContext('list');
+		if (listContext) {
+			this.getContext('list').selectedIndex = -1;
+			this.setContext(`list_select_${listContext.type}`, 0, null);
+		}
 		return this;
 	}
 
 	selectFromListPage(index = 0){
 		let listContext = this.getContext('list');
-		listContext.selectedIndex = listContext.paging.start + index;
-		return this;
+		return this.selectFromList(listContext.paging.start + index);
 	}
 
-	hasListSelected() {
+	hasListSelection() {
 		let listContext = this.getContext('list');
 		return listContext && listContext.list && listContext.selectedIndex > -1;
 	}
 
-	forListSelected(func) {
+	forListSelection(func) {
 		let listContext = this.getContext('list');
 		let item = listContext.list[listContext.selectedIndex];
 		func({ convo: this, item, type: listContext.type });
 		return this;
 	}
 
+	getListSelection() {
+		let listContext = this.getContext('list');
+		let item = listContext.list[listContext.selectedIndex];
+		return { item, type: listContext.type };
+	}
+
 	selectNextFromList(){
 		let listContext = this.getContext('list');
-		listContext.selectedIndex = listContext.selectedIndex + 1 >= listContext.list.length ?
-			0 : listContext.selectedIndex + 1;
-		return this;
+		return this.selectFromList(listContext.selectedIndex + 1 >= listContext.list.length ?
+			0 : listContext.selectedIndex + 1);
 	}
 
 	selectPrevFromList(){
 		let listContext = this.getContext('list');
-		listContext.selectedIndex =listContext.selectedIndex -1 < 0 ?
-			listContext.list.length -1 : listContext.selectedIndex -1;
-		return this;
+		return this.selectFromList(listContext.selectedIndex -1 < 0 ?
+			listContext.list.length -1 : listContext.selectedIndex -1);
 	}
 
 }
