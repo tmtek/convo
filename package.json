@@ -1,6 +1,6 @@
 {
   "name": "@tmtek/convo",
-  "version": "0.2.14",
+  "version": "0.2.15",
   "description": "A uility for building conversational responses in DialogFlow fufillments",
   "main": "index.js",
   "scripts": {
@@ -20,6 +20,14 @@
       "no-console": 0
     }
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tmtek/convo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tmtek/convo/issues"
+  },
+  "homepage": "https://github.com/tmtek/convo#readme",
   "devDependencies": {
     "eslint": "^5.7.0",
     "eslint-config-synacor": "^3.0.3"

@@ -350,7 +350,7 @@ The ConvoStorage class allows you to specify a json file to load your data from.
 
 Lists are challenging to manage in a conversational application. Long lists cannot be presented to a user in their entireity because you risk overwhelming the user with too much information and too many options. 
 
-A great conversational list experience allows the user to step through a list in easy to digest pages, and select items out of those pages. The application must persist the list and the cursor state through context so that the user can interact with the list n a series of requests and responses.
+A great conversational list experience allows the user to step through a list in easy to digest pages, and select items out of those pages. The application must persist the list and the cursor state through context so that the user can interact with the list in a series of requests and responses.
 
 Convo offers a toolkit to simplify presenting lists to the end user, offering features such as context-based persistence, list paging, and list item selection.
 
@@ -385,15 +385,13 @@ Convo.ask(new Convo()
 
 `convo.setList()` can be called at any time to have convo start managing a list for presentation. The full signature of the method is:
 
-`setList(type, items, paging = { start:0, count:5 }, listType = 'defaultlist')`
+`setList(type, list, paging = { start:0, count:5 })`
 
 **type**: An identifier use to distinguish this list from others. When rendering a list, or list items, this type parameter can be used to figure out how to render the items.
 
-**items**: An array of objects that you want to start managing as the list to be presented to the user.
+**list**: An array of objects that you want to start managing as the list to be presented to the user.
 
 **paging**: set the paging rules by default for this list. The paging object has a `start` value that specifies what index to start the paging at. `count` is the amount of items in each page.
-
-**listType**: an optional value you can set to distinguish different types of lists your application might handle. This value is used when rendering pages of a list using `forListPage()`.
 
 ### forListPage()
 
@@ -416,14 +414,20 @@ Convo.ask(new Convo()
 There are other methods you can use to control the state of the list:
 
 * `updateListPaging(paging = { start: 0, count: -1 })` : allows you to specifically reset the start index and page count for the list. -1 for count signifies all items.
+* `updateList(list)`: Change the contents of the current list and use this method to update it, but maintain all other list state.
 * `nextListPage(count = -1)`: Increments the current list page based on it's default paging values. Passing a number as the first argument will change the page count.
 * `prevListPage(count = -1)` : Decrements the current list page based on it's default paging values. Passing a number as the first argument will change the page count.
 * `clearList()`: Removes the current list from the conversational context.
-* `hasList(type = 'defaultlist')`: returns true if a list is being managed by this Convo instance. you may optionally specify the list type.
+* `hasList()`: returns true if a list is being managed by this Convo instance.
 
 ### Selecting Items from a List:
 
+Most list interations will involve being presented with a list of things, and then selecting something from that list for more detailed information and new options related to that item. Convo supports many way to select items from a list.
+ 
+* forListSelection({convo, item, type})
 * selectFromListPage(index = 0)
+* selectFromList(index = 0)
+* selectFromListByQuery(query, testFunc = (type, item, query) => false)
 * getListSelection()
 * forListSelection(listSelectionData => {})
 * clearListSelection()
@@ -433,20 +437,66 @@ There are other methods you can use to control the state of the list:
 
 ### ConvoApp List Implementation
 
-```
+ConvoApp has built-in intent handlers for handling standard list management and selection operations. You can activate these handlers by calling `registerListIntents()` in your `onRegisterIntents()` method. These methods will only be utilized if you have defined the DialogFlow List Intents required to drive the implementation, and those a described in detail in the next section.
+
+```javascript
 class MyApplication extends ConvoApp {
 
+	onRegisterIntents() {
+		//register all of the built-in list intent handlers:
+		this.registerListIntents();
+	}
+
+	/*
+	This method is called anytime the current state of the 
+	list needs to be rendered and sent to the end user.
+	*/
 	onRespondForList({ convo, type, page, list }) {
 		return convo;
 	}
 
+	/*
+	This method is called anytime the current slected item 
+	needs to be rendered and sent to the end user.
+	*/
 	onRespondForListSelection({ convo, type, item }) {
 		return convo;
 	}
-
-	onRegisterIntents() {
-		this.registerListIntents();
+	
+	/*
+	This method is called for each list item when the user 
+	is searching the list by query. Return true if you think
+	the query matches the item.
+	*/
+	onQueryListForSelection(type, item, query) {
+		return false;
 	}
 }
 ```
 
+
+#### ConvoApp List Intents:
+
+A ConvoApp expects that if you are using the built-in list intent fulfillments, that you have defined the intents for your application in DialogFlow. Here is a list of all of the intents you must define and the training statements you must define for each:
+
+* list_all : The user is requesting to hear the entire list with no paging:
+	* "list them all"
+	* "read them all"
+* list_next : The user wants the next list page:
+	* "more"
+	* "next page"
+	* "3 more" <- where 3 is a number param called: `count`
+* list_prev : The user is requesting the previous list page:
+	* "previous page"
+* list_select : The user wants to select an item from the current page by it's index in the current page. The index should be an ordinal param called `index`:
+	* "Select the first one."
+	* Pick the second.
+* list\_select_next : The user wants to select the next item after the current one.
+	* "next"
+	*  "select next"
+* list\_select_prev : The user wants to select the previous item before the current one.
+	* "previous"
+	* "select previous"
+* list_find : The user is trying to select an item in the list by matching a spoken statement to one of the list items. This should submit a text param called `query`
+	* "Select that one that contains {query}"
+	* "Select {query}"
