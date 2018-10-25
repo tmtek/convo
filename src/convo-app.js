@@ -2,6 +2,17 @@ const { Convo } = require('./convo');
 
 class ConvoApp {
 
+	static ensureNumber(value) {
+		if (!value) {
+			return value;
+		}
+		return (typeof value === 'string' || value instanceof String) ? parseInt(value, 10) : value;
+	}
+
+	static correctForZeroIndex(value) {
+		return value >= 1 ? value -1 : value;
+	}
+
 	constructor() {
 		this.registeredIntents = [];
 		this.onRegisterIntents();
@@ -39,14 +50,14 @@ class ConvoApp {
 
 		this.registerIntent('list_next', (convo, params, option, debug) => Convo.ask(
 			convo
-				.nextListPage(params ? params.count : -1)
+				.nextListPage(params ? ConvoApp.ensureNumber(params.count) : -1)
 				.forListPage(this.onRespondForList),
 			debug
 		));
 
 		this.registerIntent('list_prev', (convo, params, option, debug) => Convo.ask(
 			convo
-				.prevListPage(params ? params.count : -1)
+				.prevListPage(params ? ConvoApp.ensureNumber(params.count) : -1)
 				.forListPage(this.onRespondForList),
 			debug
 		));
@@ -56,12 +67,12 @@ class ConvoApp {
 			.forListPage(this.onRespondForList),debug));
 
 		this.registerIntent('list_select', (convo, { index }, option, debug) => Convo.ask(convo
-			.selectFromListPage(index)
+			.selectFromListPage(ConvoApp.correctForZeroIndex(ConvoApp.ensureNumber(index)))
 			.forListSelection(this.onRespondForListSelection), debug
 		));
 
 		this.registerIntent('list_find', (convo, { query }, option, debug) => Convo.ask(convo
-			.selectFromListByQuery(query, (item) => item.display_name)
+			.selectFromListByQuery(query, this.onQueryListForSelection)
 			.forListSelection(this.onRespondForListSelection), debug
 		));
 
@@ -81,6 +92,10 @@ class ConvoApp {
 
 	onRespondForList(listData) {
 		return listData.convo;
+	}
+
+	onQueryListForSelection(type, item, query) {
+		return false;
 	}
 
 	onRespondForListSelection(listSelectionData) {

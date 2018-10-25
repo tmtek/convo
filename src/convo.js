@@ -199,14 +199,26 @@ class Convo {
 	}
 
 	getContext(context) {
+
+		if (this._tmpContexts && this._tmpContexts[context]){
+			return this._tmpContexts[context];
+		}
+
 		let rContext;
 		if (this.conv && this.conv.contexts) {
 			rContext = this.conv.contexts.get ? this.conv.contexts.get(context) : this.conv.contexts[context];
 		}
-		return rContext && rContext.parameters || {};
+		if (rContext && rContext.parameters) {
+			return rContext.parameters;
+		}
+		return {};
 	}
 
 	setContext(context, lifespan, parameters) {
+		if (!this._tmpContexts) {
+			this._tmpContexts = {};
+		}
+		this._tmpContexts[context] = parameters;
 		if (this.conv && this.conv.contexts) {
 			if (this.conv.contexts.set) {
 				this.conv.contexts.set(context, lifespan, parameters);
@@ -258,11 +270,22 @@ class Convo {
 	}
 
 	setList(type, list, paging = { start: 0, count: -1 }){
-		this.setContext('list', 1, {
+		this.setContext('list', 10, {
 			type,
 			list,
 			paging,
 			selectedIndex: -1
+		});
+		return this;
+	}
+
+	updateList(list){
+		let listContext = this.getContext('list');
+		this.setContext('list', 10, {
+			type: listContext.type,
+			list,
+			paging: listContext.paging,
+			selectedIndex: listContext.selectedIndex
 		});
 		return this;
 	}
@@ -279,14 +302,16 @@ class Convo {
 
 	updateListPaging(paging = { start: 0, count: -1 }){
 		if (this.hasList()){
-			this.getContext('list').paging = paging;
+			let listContext = this.getContext('list');
+			listContext.paging = paging;
+			this.setContext('list', 10, listContext);
 		}
 		return this;
 	}
 
 	nextListPage(count = -1){
 		let listContext = this.getContext('list');
-		let newCount = count === -1 ? listContext.paging.count : count;
+		let newCount = count <= 0 ? listContext.paging.count : count;
 		let newIndex = listContext.paging.start + listContext.paging.count;
 		if (newIndex >= listContext.list.length || newIndex < 0) {
 			newIndex = 0;
@@ -300,7 +325,7 @@ class Convo {
 
 	prevListPage(count = -1){
 		let listContext = this.getContext('list');
-		let newCount = count === -1 ? listContext.paging.count : count;
+		let newCount = count <= 0 ? listContext.paging.count : count;
 		let newIndex = 0;
 		if (listContext.paging.start <= 0) {
 			newIndex = listContext.list.length - newCount;
@@ -322,9 +347,9 @@ class Convo {
 		if (this.hasList()){
 			let listContext = this.getContext('list');
 			let paging = listContext.paging;
-			let count = paging.count < 0 ? listContext.list.length : paging.count;
+			let count = paging.count <= 0 ? listContext.list.length : paging.count;
 			let page = listContext.list.slice(paging.start, Math.min(paging.start + count, listContext.list.length));
-			func({ convo: this, page, list: listContext.list, type: listContext.type });
+			func({ convo: this, page, paging, list: listContext.list, type: listContext.type });
 		}
 		else {
 			func({ convo: this });
@@ -335,16 +360,14 @@ class Convo {
 	selectFromList(index = 0){
 		let listContext = this.getContext('list');
 		listContext.selectedIndex = index;
-		this.setContext(`list_select_${listContext.type}`, 1, { active: true });
+		this.setContext('list', 10, listContext);
+		this.setContext(`list_select_${listContext.type}`, 10, { active: true });
 		return this;
 	}
 
-	selectFromListByQuery(query, findTextFunc = (item) => item){
-		return this.forList(({ list }) => {
-			let testedItems = list.map(item => {
-				let test =  new RegExp(query.toLowerCase()).test(findTextFunc(item).toLowerCase());
-				return test;
-			});
+	selectFromListByQuery(query, testFunc = (type, item, query) => false){
+		return this.forList(({ list, type }) => {
+			let testedItems = list.map(item => testFunc(type, item, query));
 			for (let i = 0; i<  testedItems.length; i++) {
 				if (testedItems[i]) {
 					this.selectFromList(i);
@@ -394,7 +417,7 @@ class Convo {
 	getListSelection() {
 		let listContext = this.getContext('list');
 		let item = listContext.list[listContext.selectedIndex];
-		return { item, type: listContext.type };
+		return { item, type: listContext.type, index: listContext.selectedIndex };
 	}
 
 	selectNextFromList(){
