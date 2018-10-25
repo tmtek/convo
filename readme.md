@@ -8,6 +8,24 @@ Convo separates your working application's code completely from all DialogFlow d
 
 `npm i @tmtek/convo`
 
+### Topics:
+
+* ConvoApp
+* DialogFlow Fulfillments
+	* About Class Mappings
+* Responding with Convo
+	* Responding to an Intent
+	* Composing Responses
+	* Async Operations
+* Development And Testing
+	* Simulating Conversations
+* API Reference
+* Advanced Topics
+	* Using Storage
+	* Handling Lists
+
+
+
 ## Convo App
 
 Convo applications require you to encapsulate your DialogFlow intent callbacks in a class wrapper that facilitates their execution outside of the DialogFlow scaffolding:
@@ -34,7 +52,7 @@ new MyApplication()
 
 The advantage here is that I can run and test my application by simply executing this application with Node.
 
-### DialogFlow Fulfillment
+## DialogFlow Fulfillments
 
 The application shown above can be published into a DialogFlow fulfillment by simply requiring the ConvoApp subclass you created in the fulfillment, and then binding it to the DialogFlow app as shown:
 
@@ -54,6 +72,53 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     .bind(dialogflow({debug: true}))
 );
 ```
+
+#### About Class Mappings
+
+Convo keeps all DialogFlow related scaffolding and dependencies out of your dev and test enviornment. One of the things it needs to keep out, is the classes DialogFlow uses to wrap responses. Convo offers methods you can use build rich responses, but they are mapped just in time to their DialogFlow counterparts with the help of the method `ConvoApp.setClassMappings()`:
+
+```javascript
+const {
+  dialogflow,
+  SignIn,
+  SimpleResponse,
+  BasicCard,
+  List,
+  Button,
+  Image,
+  NewSurface
+} = require('actions-on-google');
+const functions = require('firebase-functions');
+const {MyApplication} = require('myapplication');
+
+exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
+  new MyApplication()
+    .setClassMappings({
+      SignIn: obj => new SignIn(obj),
+      SimpleResponse: obj => new SimpleResponse(obj),
+      NewSurface: obj => new NewSurface(obj),
+      BasicCard: obj => new BasicCard(obj),
+      List: obj => new List(obj),
+      Button: obj => new Button(obj),
+      Image: obj => new Image(obj)
+    })
+    .bind(dialogflow({debug: true}))
+);
+
+```
+In the above fulfillment example, Your application is mapping all of the rich response classes just before binding to the DialogFlow application. 
+
+**You only need to bind the classes you are actually using, and SimpleResponse must always be bound.**
+
+These mappings are expressed in your application when you utilize the methods fir Rich responses like so:
+
+```javascript
+Convo.ask(Convo.SignIn());
+Convo.ask(Convo.BasicCard{title:"My card"});
+//etc
+
+```
+
 
 ## Responding with Convo
 
@@ -93,6 +158,39 @@ this.registerIntent('welcome', (convo, params, option, debug) => {
 ``` 
 
 A response must ALWAYS return the result of either `Convo.ask(convo)` or `Convo.close(convo)`, but you are free to decorate your convo instance in whatever way you need to.
+
+### Composing responses:
+
+Responses to the end user are composed using 3 main methods. All of the following methods return a self reference to facilitate chaining for ease of use:
+
+#### convo.speak(message, alsoWrite=true)
+
+This method produces a spoken response to the end user, and by default will also write the response if a screen is available on the device your app is running on. If `alsoWrite` is set to false, the written response will not be produced.
+
+You may call `.speak()` as many times as you need to to compose your response. Convo will compile all of your calls together into one block of text when it submits it to DialogFlow.
+
+#### convo.write(message)
+
+This method will write text on the screen if one is available on the device your app is running on, otherwise it is ignored. This text is never spoken.
+
+#### convo.present(media, requiredCapabilities, send)
+
+This method allows you to display rich responses to the end user, as well as other special user interactions facilitated by DialogFlow:
+
+##### Supported Media Types:
+
+* Convo.SignIn({})
+* Convo.SimpleResponse({})
+* Convo.NewSurface({})
+* Convo.BasicCard({})
+* Convo.List({})
+* Convo.Button({})
+* Convo.Image({})
+
+##### Sending Rich Responses
+
+If your application is runnign on a device that does not support the capabilities required to render the media, you can use `send` to request that the media be pushed to another device that can render it if the user has another device that supports it.
+
 
 ### Async Operations for a Convo Response:
 
@@ -158,7 +256,64 @@ new MyApplication()
 ```
 We use`then()` of the resulting promises returned from `intent()` to simulate the multiple conversation steps. Notice how for each intent call we create a new instance of Convo derived from the previous: `new Convo(convo)`. This allows us to create a new response for each intent, but still carry over the context and storage data to simulate how things work in DialogFlow with a standard `conv` object.
 
-### Using Storage
+
+
+## API Reference
+
+### ConvoApp
+
+* ConvoApp.setClassMappings(mappings);
+* onRegisterIntents();
+* registerIntent(intent, intentHandler);
+* intent(convo, intent, params, option, debugOptions);
+* bind(dialogflowapp);
+
+### Convo
+
+* new Convo(convo)
+* new Convo(conv)
+* Convo.ask(convo, debugOptions)
+* Convo.close(convo, debugOptions)
+* write(text)
+* speak(text, alsoWrite = true)
+* present(media, capabilities, send)
+* promise(convo => {})
+* clear()
+* setAccessToken(token)
+* setConext(contextName, lifespan, value)
+* getContext(contextName)
+
+#### Convo Storage
+* getStorage()
+* setStorage(data)
+* setToStorage(name, data)
+* getFromStorage(name)
+* isInStorage(name, predicate)
+
+#### Convo Lists
+* setList(type, list, paging = { start: 0, count: -1 })
+* forListPage(({convo, page,list}) => {})
+* updateListPaging(paging = { start: 0, count: -1 })
+* nextListPage(count = -1)
+* prevListPage(count = -1)
+
+#### Convo Rich Responses
+* Convo.SimpleResponse()
+* Convo.BasicCard()
+* Convo.List()
+* Convo.Image()
+* Convo.Button()
+* Convo.NewSurface()
+* Convo.SignIn()
+
+#### ConvoStorage
+* new ConvoStorage(filename)
+* .load(convo => {})
+
+
+# Advanced Topics
+
+## Using Storage
 
 Convo allows you to simulate DialogFlow's storage capabilities. Storage lets you store arbitrary data for the user that is accessible across sessions of usage. Convo offers methods to simply interaction with storage, but to also simulate it in the dev/test environment.
 
@@ -191,43 +346,157 @@ new ConvoStorage("storage.json").load(storageConvo => {
 
 The ConvoStorage class allows you to specify a json file to load your data from. Then you call `load(convo=> {})` to get a Convo object generated for that storage data. If your application uses `setToStorage()` thereafter, the data will be automatically saved to that json file.
 
+## Handling Lists:
+
+Lists are challenging to manage in a conversational application. Long lists cannot be presented to a user in their entireity because you risk overwhelming the user with too much information and too many options. 
+
+A great conversational list experience allows the user to step through a list in easy to digest pages, and select items out of those pages. The application must persist the list and the cursor state through context so that the user can interact with the list in a series of requests and responses.
+
+Convo offers a toolkit to simplify presenting lists to the end user, offering features such as context-based persistence, list paging, and list item selection.
+
+When managing lists with Convo there are a few assumptions the framework makes in the spirit of user experience and usability:
+
+* Only one list is being presented to the user at a time.
+* List items will be presented in digestible pages to avoid overwhelming the user with information and options.
+* User will be able to make selections from any page presented to them, and that selection options will always be in relation to the current page.
+
+```javascript
+let list = [
+	'list item 0', 
+	'list item 1', 
+	'list item 2', 
+	'list item 3', 
+	'list item 4'
+];
+
+Convo.ask(new Convo()
+	.speak("Here's your list:")
+	.setList("general", list, { start: 0, count: 3 })
+	.forListPage(({ convo, page }) => {
+		page.forEach(item => {
+			convo.speak(item);
+		});
+	});
+);
+
+```
+
+### setList()
+
+`convo.setList()` can be called at any time to have convo start managing a list for presentation. The full signature of the method is:
+
+`setList(type, list, paging = { start:0, count:5 })`
+
+**type**: An identifier use to distinguish this list from others. When rendering a list, or list items, this type parameter can be used to figure out how to render the items.
+
+**list**: An array of objects that you want to start managing as the list to be presented to the user.
+
+**paging**: set the paging rules by default for this list. The paging object has a `start` value that specifies what index to start the paging at. `count` is the amount of items in each page.
+
+### forListPage()
+
+`convo.forListPage()` can be used at any time to render the state of the list into a Convo response. You must supply a function to this method that receives a listState object, and allows you to handle the result like so:
+
+```javascript
+
+.forListPage(({ convo, page, list, type}) => {
+	convo.speak(`Rendering page from list of type ${type}:`);
+	page.forEach(item => {
+		convo.speak(`${item},`);
+	});
+	convo.speak(` and ${list.length - page.length} other items.`);
+});
+
+``` 
+
+### List control methods:
+
+There are other methods you can use to control the state of the list:
+
+* `updateListPaging(paging = { start: 0, count: -1 })` : allows you to specifically reset the start index and page count for the list. -1 for count signifies all items.
+* `updateList(list)`: Change the contents of the current list and use this method to update it, but maintain all other list state.
+* `nextListPage(count = -1)`: Increments the current list page based on it's default paging values. Passing a number as the first argument will change the page count.
+* `prevListPage(count = -1)` : Decrements the current list page based on it's default paging values. Passing a number as the first argument will change the page count.
+* `clearList()`: Removes the current list from the conversational context.
+* `hasList()`: returns true if a list is being managed by this Convo instance.
+
+### Selecting Items from a List:
+
+Most list interations will involve being presented with a list of things, and then selecting something from that list for more detailed information and new options related to that item. Convo supports many way to select items from a list.
+ 
+* forListSelection({convo, item, type})
+* selectFromListPage(index = 0)
+* selectFromList(index = 0)
+* selectFromListByQuery(query, testFunc = (type, item, query) => false)
+* getListSelection()
+* forListSelection(listSelectionData => {})
+* clearListSelection()
+* hasListSelection()
+* selectNextFromList()
+* selectPrevFromList()
+
+### ConvoApp List Implementation
+
+ConvoApp has built-in intent handlers for handling standard list management and selection operations. You can activate these handlers by calling `registerListIntents()` in your `onRegisterIntents()` method. These methods will only be utilized if you have defined the DialogFlow List Intents required to drive the implementation, and those a described in detail in the next section.
+
+```javascript
+class MyApplication extends ConvoApp {
+
+	onRegisterIntents() {
+		//register all of the built-in list intent handlers:
+		this.registerListIntents();
+	}
+
+	/*
+	This method is called anytime the current state of the 
+	list needs to be rendered and sent to the end user.
+	*/
+	onRespondForList({ convo, type, page, list }) {
+		return convo;
+	}
+
+	/*
+	This method is called anytime the current slected item 
+	needs to be rendered and sent to the end user.
+	*/
+	onRespondForListSelection({ convo, type, item }) {
+		return convo;
+	}
+	
+	/*
+	This method is called for each list item when the user 
+	is searching the list by query. Return true if you think
+	the query matches the item.
+	*/
+	onQueryListForSelection(type, item, query) {
+		return false;
+	}
+}
+```
 
 
-## API Reference
+#### ConvoApp List Intents:
 
-### ConvoApp
+A ConvoApp expects that if you are using the built-in list intent fulfillments, that you have defined the intents for your application in DialogFlow. Here is a list of all of the intents you must define and the training statements you must define for each:
 
-* ConvoApp.setClassMappings(mappings);
-* onRegisterIntents();
-* registerIntent(intent, intentHandler);
-* intent(convo, intent, params, option, debugOptions);
-* bind(dialogflowapp);
-
-### Convo
-
-* Convo.ask(convo, debugOptions)
-* Convo.close(convo, debugOptions)
-* write(text)
-* speak(text, alsoWrite = true)
-* present(media, capabilities, send)
-* promise(convo => {})
-* clear()
-* setAccessToken(token)
-* setConext(contextName, lifespan, value)
-* getContext(contextName)
-* getStorage()
-* setStorage(data)
-* setToStorage(name, data)
-* getFromStorage(name)
-* isInStorage(name, predicate)
-
-#### Convo Rich Responses
-* Convo.SimpleResponse()
-* Convo.BasicCard()
-* Convo.List()
-* Convo.Image()
-* Convo.Button()
-* Convo.NewSurface()
-* Convo.SignIn()
-
-
+* list_all : The user is requesting to hear the entire list with no paging:
+	* "list them all"
+	* "read them all"
+* list_next : The user wants the next list page:
+	* "more"
+	* "next page"
+	* "3 more" <- where 3 is a number param called: `count`
+* list_prev : The user is requesting the previous list page:
+	* "previous page"
+* list_select : The user wants to select an item from the current page by it's index in the current page. The index should be an ordinal param called `index`:
+	* "Select the first one."
+	* Pick the second.
+* list\_select_next : The user wants to select the next item after the current one.
+	* "next"
+	*  "select next"
+* list\_select_prev : The user wants to select the previous item before the current one.
+	* "previous"
+	* "select previous"
+* list_find : The user is trying to select an item in the list by matching a spoken statement to one of the list items. This should submit a text param called `query`
+	* "Select that one that contains {query}"
+	* "Select {query}"

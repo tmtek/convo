@@ -1,5 +1,5 @@
 const fs = require('fs');
-const {Convo} = require('./convo');
+const { Convo } = require('./convo');
 
 class ConvoStorage {
 	constructor(filename) {
@@ -13,22 +13,22 @@ class ConvoStorage {
 				return;
 			}
 			fs.readFile(this._filename, 'utf8', (error, data) => {
-				!error ? resolve(JSON.parse(data)) : resolve({})
-			})
+				!error ? resolve(JSON.parse(data)) : resolve({});
+			});
 		})
-		.then(data => callback(
-			new Convo()
-				.setStorage(data)
-				.onStorageUpdated(this.write)
-		));
+			.then(data => callback(
+				new Convo()
+					.setStorage(data)
+					.onStorageUpdated(storage => this.write(storage))
+			));
 	}
 
 	write(storage) {
-		if(!this._filename) {
+		if (!this._filename) {
 			return;
 		}
-		fs.writeFile(this._filename, JSON.stringify(storage, null, 2), error => {})
+		fs.writeFile(this._filename, JSON.stringify(storage, null, 2), error => {console.log(`error:${error}`);});
 	}
 }
 
-module.exports = {ConvoStorage}
+module.exports = { ConvoStorage };
