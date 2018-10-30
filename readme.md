@@ -26,7 +26,6 @@ Convo separates your working application's code completely from all DialogFlow d
 	* Help
 
 
-
 ## Convo App
 
 Convo applications require you to encapsulate your DialogFlow intent callbacks in a class wrapper that facilitates their execution outside of the DialogFlow scaffolding:
