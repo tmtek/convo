@@ -27,7 +27,7 @@ class ConvoStorage {
 		if (!this._filename) {
 			return;
 		}
-		fs.writeFile(this._filename, JSON.stringify(storage, null, 2), error => {console.log(`error:${error}`);});
+		fs.writeFile(this._filename, JSON.stringify(storage, null, 2), error => {});
 	}
 }
 

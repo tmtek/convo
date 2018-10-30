@@ -23,6 +23,7 @@ Convo separates your working application's code completely from all DialogFlow d
 * Advanced Topics
 	* Using Storage
 	* Handling Lists
+	* Help
 
 
 
@@ -37,9 +38,9 @@ const {ConvoApp, Convo} = require(`@tmtek/convo`);
 class MyApplication extends ConvoApp {
 	//Register all of your DialogFlow intents:
 	onRegisterIntents() {
-		this.registerIntent('welcome', (convo, params, option, debug) => {
-			return Convo.ask(convo.speak("Welcome to my application!"), debug);
-		});
+		this.registerIntent('welcome', (convo, params, option, debug) =>
+			Convo.ask(convo.speak("Welcome to my application!"), debug);
+		);
 	}
 }
 
@@ -152,9 +153,9 @@ Convo compiles all of the response information you apply to it into one response
 Convo responses will always be composed and returned in response to an intent registered in your `ConvoApp`:
 
 ```javascript
-this.registerIntent('welcome', (convo, params, option, debug) => {
-	return Convo.ask(convo.speak("Welcome to my application!"), debug);
-});
+this.registerIntent('welcome', (convo, params, option, debug) =>
+	Convo.ask(convo.speak("Welcome to my application!"), debug);
+);
 ``` 
 
 A response must ALWAYS return the result of either `Convo.ask(convo)` or `Convo.close(convo)`, but you are free to decorate your convo instance in whatever way you need to.
@@ -197,8 +198,8 @@ If your application is runnign on a device that does not support the capabilitie
 Convo instances have a `.promise()` method that allow you to perform async work and apply that result to the existing convo object:
 
 ```javascript
-this.registerIntent('welcome', (convo, params, option, debug) => {
-	return Convo.ask(
+this.registerIntent('welcome', (convo, params, option, debug) => 
+	Convo.ask(
 		convo.speak("Welcome to my application!")
 			.promise(() => 
 				someAsyncThing()
@@ -208,7 +209,7 @@ this.registerIntent('welcome', (convo, params, option, debug) => {
 			), 
 		debug
 	);
-});
+);
 ``` 
 
 `Convo.ask()` and `Convo.close()` will ensure that all work is completed on a Convo object before it submits itself to DialogFlow as a response.
@@ -500,3 +501,78 @@ A ConvoApp expects that if you are using the built-in list intent fulfillments, 
 * list_find : The user is trying to select an item in the list by matching a spoken statement to one of the list items. This should submit a text param called `query`
 	* "Select that one that contains {query}"
 	* "Select {query}"
+
+## Help
+
+Conversational applications have no visual user interface (except rich responses), and creating affordances for all of the capabilities of an application can be impractical due to the potential for overwhelming the user with too much information.
+
+Convo offers an opt-in browsable Help system that you can use to explain the capabilities of your application in detail. The help system allows you to define *topical categories*, and then fill those categories with *tips*.
+
+### Topical Categories
+
+Topical Categories represent high-level features of your application. For example, a shopping list app might have the following categories:
+
+* Adding New Items.
+* Navigating The List.
+* Removing Items.
+
+### Tips
+
+Each Topical Category contains a list of Tips. Tips are just a quick explanation of something that the user of the application can do. Here is the first category from the list from above, but with tips added:
+
+* Adding New Items.
+	* You can add bananas to your shopping list by saying:"Add bananas to shopping list."
+	* If you just say "Add", the shopping list will ask you what you would like to add to the shopping list.
+	* If you specify a quantity, the shopping list will see this and adjust the quantity in your list automatically.
+	* You can ask to add many items at once, and the shopping list will add them all individually for you.
+
+### ConvoApp Help System
+
+Here is an example of how you add all of your help content to your ConvoApp:
+
+```javascript
+
+class MyApp extends ConvoApp {
+
+	onRegisterIntents() {
+		this.registerListIntents();
+		this.registerHelpIntent();
+	}
+	
+	onPrepareHelp() {
+		return [
+			{
+				description: 'Adding New Items.',
+				tips: [
+					{ text: 'You can add bananas to your shopping list by saying:"Add bananas to shopping list."' },
+					{ text: 'If you just say "Add", the shopping list will ask you what you would like to add to the shopping list.' },
+					{ text: 'If you specify a quantity, the shopping list will see this and adjust the quantity in your list automatically.' },
+					{ text: 'You can ask to add many items at once, and the shopping list will add them all individually for you.' }
+				]
+			},
+			{
+				description: 'Navigating The List.',
+				tips: [
+					{ text: 'You can say "Read my shopping list" at any time to hear what\'s on the list.' },
+					{ text: 'You can select any item in the list by it\'s position, for example "Select the first one".' },
+					{ text: 'You can select any item by it\'s contents, for example "Select the bananas" and we will try to match you query with something in the list.' }
+				]
+			},
+			{
+				description: 'Removing Items',
+				tips: [
+					{ text: 'Once you have selected something in the list, you can say "Delete it", or "Got it" to remove it from the list.' },
+					{ text: 'You can delete by position in the list by saying "Delete the second one".' }
+				]
+			}
+		];
+	}	
+}
+
+```
+
+Help Content can be activated by the user at any time by them saying:
+
+> "Help", "I need Some Help", or "What can I do?"
+
+The Help System uses the Convo List system to present the Topical Categories to the user. User's can select categories in the Help list in the same way they would any other Convo list, and they will be presented with all of the tips for that category.

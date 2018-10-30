@@ -161,21 +161,33 @@ class Convo {
 		return this;
 	}
 
-	write(message) {
-		this._write.push(message.toString());
+	hasWriting() {
+		return this._write && this._write.length > 0;
+	}
+
+	write(message, onlyIfNoWriting = false) {
+		if (message) {
+			if (!onlyIfNoWriting || (onlyIfNoWriting && !this.hasWriting())) {
+				this._write.push(message.toString());
+			}
+		}
 		return this;
 	}
 
 	speak(message, writeAlso = true) {
-		this._speak.push(message.toString());
-		if (writeAlso) {
-			this.write(message);
+		if (message) {
+			this._speak.push(message.toString());
+			if (writeAlso) {
+				this.write(message);
+			}
 		}
 		return this;
 	}
 
 	present(media, capabilities = null, send = null) {
-		this._rich.push({ capabilities, send, media });
+		if (media) {
+			this._rich.push({ capabilities, send, media });
+		}
 		return this;
 	}
 

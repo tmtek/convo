@@ -19,6 +19,16 @@ class Say {
 		return textForItems;
 	}
 
+	static listItems(items, mapFunc, itemNameFunc = (item, i) => `item_${i}`) {
+		let inc = 0;
+		return items
+			.map(mapFunc)
+			.reduce((accList, item) => {
+				accList[itemNameFunc(item, inc++)] = item;
+				return accList;
+			}, {});
+	}
+
 	static append(val) {
 		return new Say().append(val);
 	}
