@@ -210,6 +210,17 @@ class Convo {
 		return this;
 	}
 
+	getAccessToken() {
+		if (this.conv && this.conv.user && this.conv.user.access && this.conv.user.access.token) {
+			return this.conv.user.access.token;
+		}
+		return null;
+	}
+
+	hasAccessToken() {
+		return this.getAccessToken() !== null;
+	}
+
 	getContext(context) {
 
 		if (this._tmpContexts && this._tmpContexts[context]){
@@ -308,8 +319,15 @@ class Convo {
 		return this;
 	}
 
-	hasList() {
+	hasList(type = null) {
+		if (type && this.hasList()) {
+			return type === this.getContext('list').type;
+		}
 		return this.getContext('list') && this.getContext('list').list;
+	}
+
+	getList() {
+		return this.getContext('list');
 	}
 
 	updateListPaging(paging = { start: 0, count: -1 }){
