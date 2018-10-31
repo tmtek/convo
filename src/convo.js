@@ -2,8 +2,8 @@ const { Say } = require('./say');
 
 class Convo {
 
-	static mockConv() {
-		return {
+	static mockConv(populateFunc = conv => conv) {
+		let conv = {
 			surface: {
 				capabilities: {
 					has: () => true
@@ -22,6 +22,8 @@ class Convo {
 			},
 			contexts: {}
 		};
+		populateFunc(conv);
+		return conv;
 	}
 
 	static setClassMappings(mappings) {
@@ -66,11 +68,8 @@ class Convo {
 	}
 
 	static complete(convo, action = 'close', options = { log: false, logFunc: null }) {
-		if (!convo.conv){
-			if (options.log) {
-				console.log(`${action}:${JSON.stringify(convo, null, 1)}`);
-			}
-			return Promise.resolve(convo);
+		if (!convo.conv) {
+			throw new Error('You must submit a Convo object to .ask() or .close()');
 		}
 		let finalText = convo._write.reduce((acc, text) => acc.sentence(text), new Say()).toString().trim();
 		let finalSpeech = convo._speak.reduce((acc, text) => acc.sentence(text), new Say()).toString().trim();
@@ -78,15 +77,16 @@ class Convo {
 		let textWasPopulated = !!(finalText || finalSpeech);
 
 		let isRunningInDialogFlow = typeof convo.conv[action] === 'function';
-		let convoFunc = isRunningInDialogFlow ? obj => convo.conv[action](obj) : resp => {
+		let convoFunc = isRunningInDialogFlow ? payload => convo.conv[action](payload) : payload => {
 			if (options.log) {
 				if (options.logFunc) {
-					options.logFunc(action, resp);
+					options.logFunc(action, payload);
 				}
 				else {
-					console.log(`${action}:${JSON.stringify(resp, null, 1)}`);
+					console.log(`${action}:${JSON.stringify(payload, null, 1)}`);
 				}
 			}
+			return { action, payload };
 		};
 
 		if (textWasPopulated) {
@@ -121,7 +121,7 @@ class Convo {
 			}
 		});
 
-		return isRunningInDialogFlow ? Promise.all(promises) : Promise.all(promises).then(() => convo);
+		return isRunningInDialogFlow ? Promise.all(promises) : Promise.all(promises).then(requests => ({ convo, requests }));
 	}
 
 	/* eslint-enable new-cap */
@@ -129,7 +129,6 @@ class Convo {
 		if (isPromise(obj)) {
 			return obj.then(result => this.prepComplete(result, action, options));
 		}
-
 		return this.complete(obj, action, options);
 	}
 
@@ -142,7 +141,7 @@ class Convo {
 	}
 
 	constructor(obj) {
-		this.conv = !obj ? Convo.mockConv() : this.copyConvo(obj);
+		this.conv = !obj ? Convo.mockConv() : (obj.conv ? this.copyConvo(obj): obj);
 		this.clear();
 	}
 
@@ -195,8 +194,15 @@ class Convo {
 	 * Guarantee that func returns a promise
 	 * @param {Function} func
 	 */
-	promise(func) {
-		return Promise.resolve().then(() => func(this) );
+	promise(func = c => c) {
+		return Promise.resolve()
+			.then(() => func(this) )
+			.then(c => {
+				if (!c.conv) {
+					throw new Error('Must return a Convo object!');
+				}
+				return c;
+			});
 	}
 
 	setAccessToken(token) {
@@ -211,7 +217,9 @@ class Convo {
 	}
 
 	getContext(context) {
-
+		if (!context) {
+			throw new Error('You must provide a context to getContext()');
+		}
 		if (this._tmpContexts && this._tmpContexts[context]){
 			return this._tmpContexts[context];
 		}
@@ -223,10 +231,10 @@ class Convo {
 		if (rContext && rContext.parameters) {
 			return rContext.parameters;
 		}
-		return {};
+		return null;
 	}
 
-	setContext(context, lifespan, parameters) {
+	setContext(context, lifespan = null, parameters = null) {
 		if (!this._tmpContexts) {
 			this._tmpContexts = {};
 		}
@@ -236,7 +244,7 @@ class Convo {
 				this.conv.contexts.set(context, lifespan, parameters);
 			}
 			else {
-				this.conv.contexts[context] = { lifespan, parameters };
+				this.conv.contexts[context] = parameters ? { lifespan, parameters } : null;
 			}
 		}
 		return this;
@@ -248,7 +256,7 @@ class Convo {
 
 	setStorage(data) {
 		if (this.conv && this.conv.user) {
-			this.conv.user.storage = data;
+			this.conv.user.storage = data ? data : {};
 		}
 		return this;
 	}

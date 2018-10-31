@@ -4,7 +4,7 @@
   "description": "A uility for building conversational responses in DialogFlow fufillments",
   "main": "index.js",
   "scripts": {
-    "test": "eslint *.js src"
+    "test": "mocha"
   },
   "author": "tmtek",
   "license": "MIT",
@@ -30,6 +30,7 @@
   "homepage": "https://github.com/tmtek/convo#readme",
   "devDependencies": {
     "eslint": "^5.7.0",
-    "eslint-config-synacor": "^3.0.3"
+    "eslint-config-synacor": "^3.0.3",
+    "mocha": "^5.2.0"
   }
 }
