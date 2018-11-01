@@ -30,6 +30,40 @@ describe('Convo', () => {
 		});
 	});
 
+	describe('#setClassMappings', () => {
+		it('Should wrap data when class mappings are not set.', () => {
+			let contents = { id: 'test' };
+			assert(Convo.SignIn(contents).data.id ==='test');
+			assert(Convo.SimpleResponse(contents).data.id ==='test');
+			assert(Convo.Button(contents).data.id ==='test');
+			assert(Convo.NewSurface(contents).data.id ==='test');
+			assert(Convo.Image(contents).data.id ==='test');
+			assert(Convo.List(contents).data.id ==='test');
+			assert(Convo.BasicCard(contents).data.id ==='test');
+		});
+		it('Should allow set class mappings to override defaults', () => {
+			let contents = { id: 'test' };
+			let mapFunc = data => data;
+			Convo.setClassMappings({
+				SignIn: mapFunc,
+				SimpleResponse: mapFunc,
+				Button: mapFunc,
+				NewSurface: mapFunc,
+				Image: mapFunc,
+				List: mapFunc,
+				BasicCard: mapFunc
+			});
+			assert(Convo.SignIn(contents).id ==='test');
+			assert(Convo.SimpleResponse(contents).id ==='test');
+			assert(Convo.Button(contents).id ==='test');
+			assert(Convo.NewSurface(contents).id ==='test');
+			assert(Convo.Image(contents).id ==='test');
+			assert(Convo.List(contents).id ==='test');
+			assert(Convo.BasicCard(contents).id ==='test');
+			Convo.setClassMappings(null);
+		});
+	});
+
 	describe('#constructor',() => {
 		it('Should contain a default mock conv object when no argument is passed.', () => {
 			let convo = new Convo();
@@ -162,6 +196,45 @@ describe('Convo', () => {
 				.then(c => {
 					c && done(new Error('Should have thrown an error because the returned type is not Convo'));
 				});
+		});
+	});
+
+	describe('#getAccessToken', () => {
+		it('Should return null if no access token exists', () => {
+			let convo = new Convo();
+			assert(!convo.getAccessToken(), 'Should be no access token');
+		});
+		it('Should return token if access token exists in conv.', () => {
+			let convo = new Convo(Convo.mockConv(conv => {
+				conv.user.access.token = 'test';
+			}));
+			assert(convo.getAccessToken() === 'test', 'Should be an access token');
+		});
+	});
+
+	describe('#hasAccessToken', () => {
+		it('Should return false if no access token exists', () => {
+			let convo = new Convo();
+			assert(!convo.hasAccessToken(), 'Should be no access token');
+		});
+		it('Should true if access token exists in conv.', () => {
+			let convo = new Convo(Convo.mockConv(conv => {
+				conv.user.access.token = 'test';
+			}));
+			assert(convo.hasAccessToken(), 'Should be an access token');
+		});
+	});
+
+	describe('#setAccessToken', () => {
+		it('Should allow us to set a token', () => {
+			let convo = new Convo().setAccessToken('test');
+			assert(convo.getAccessToken() === 'test', 'Should be an access token');
+		});
+		it('Should change the token if access token exists in conv.', () => {
+			let convo = new Convo(Convo.mockConv(conv => {
+				conv.user.access.token = 'test';
+			})).setAccessToken('test 2');
+			assert(convo.getAccessToken() === 'test 2', 'Should be an access token');
 		});
 	});
 
@@ -894,6 +967,52 @@ describe('Convo', () => {
 		it('Should throw error if no contextual list exists.', () => {
 			assert.throws(() => new Convo().selectFromListPage(0));
 		});
+		it('Should select items in full list page.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			convo.selectFromListPage(0);
+			assert(
+				convo.getList().selectedIndex === 0 && convo.getList().list[convo.getList().selectedIndex]=== 'item 1',
+				'selectedIndex is not 0'
+			);
+			convo.selectFromListPage(1);
+			assert(
+				convo.getList().selectedIndex === 1 && convo.getList().list[convo.getList().selectedIndex]=== 'item 2',
+				'selectedIndex is not 1'
+			);
+			convo.selectFromListPage(2);
+			assert(
+				convo.getList().selectedIndex === 2 && convo.getList().list[convo.getList().selectedIndex]=== 'item 3',
+				'selectedIndex is not 2'
+			);
+
+		});
+		it('Should select items in list page staring from start index.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3'], { start: 1, count: 2 });
+			convo.selectFromListPage(0);
+			assert(
+				convo.getList().selectedIndex === 1 && convo.getList().list[convo.getList().selectedIndex]=== 'item 2',
+				'selectedIndex is not 1'
+			);
+			convo.selectFromListPage(1);
+			assert(
+				convo.getList().selectedIndex === 2 && convo.getList().list[convo.getList().selectedIndex]=== 'item 3',
+				'selectedIndex is not 2'
+			);
+			convo.selectFromListPage(0);
+			assert(
+				convo.getList().selectedIndex === 1 && convo.getList().list[convo.getList().selectedIndex]=== 'item 2',
+				'selectedIndex is not 1'
+			);
+
+		});
+		it('Should throw error is index if outside of page count.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3'], { start: 1, count: 2 });
+			assert.throws(() => convo.selectFromListPage(5));
+		});
+		it('Should throw error is index is less than 0.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3'], { start: 1, count: 2 });
+			assert.throws(() => convo.selectFromListPage(-1));
+		});
 	});
 
 	describe('#selectNextFromList', () => {
@@ -1017,6 +1136,68 @@ describe('Convo', () => {
 				!convo.hasListSelection(),
 				'there should be no selection.'
 			);
+		});
+	});
+
+	describe('#getListSelection', () => {
+		it('Should return null if contextual list exists, but no selection has been made.', () => {
+			let convo = new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3']);
+			assert(
+				!convo.getListSelection(),
+				`there should not be a selection.${JSON.stringify(convo.getListSelection(), null, 2)}`
+			);
+		});
+		it('Should return selection data if contextual list and selection exists.', () => {
+			let convo = new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3'])
+				.selectFromList(0);
+			assert(
+				convo.getListSelection() && convo.getListSelection().index === 0 && convo.getListSelection().item === 'item 1',
+				`there should not be a selection.${JSON.stringify(convo.getListSelection(), null, 2)}`
+			);
+		});
+	});
+
+	describe('#forListSelection', () => {
+		it('Should output selection if it exists.', (done) => {
+			new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3', 'item 4', 'item 5'])
+				.selectFromList(0)
+				.forListSelection(({ item, type }) => assert(
+					item === 'item 1' &&
+					type === 'items',
+					'selected data incorrect'
+				))
+				.promise(c => {
+					done();
+					return c;
+				});
+		});
+		it('Should not call function if no contextual list is set.', (done) => {
+			let doneCalled = false;
+			new Convo()
+				.forListSelection(({ item }) => {
+					doneCalled = true;
+					done(new Error('This method should not be called.'));
+				})
+				.promise(c => {
+					!doneCalled && done();
+					return c;
+				});
+		});
+		it('Should not call function if no selection is set.', (done) => {
+			let doneCalled = false;
+			new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3', 'item 4', 'item 5'])
+				.forListSelection(({ item }) => {
+					doneCalled = true;
+					done(new Error('This method should not be called.'));
+				})
+				.promise(c => {
+					!doneCalled && done();
+					return c;
+				});
 		});
 	});
 

@@ -464,6 +464,9 @@ class Convo {
 	}
 
 	selectFromListPage(index = 0){
+		if (index < 0) {
+			throw new Error('Can\'t select and index less than 0.');
+		}
 		let listContext = this.getContext('list');
 		return this.selectFromList(listContext.paging.start + index);
 	}
@@ -474,13 +477,18 @@ class Convo {
 	}
 
 	forListSelection(func) {
-		let listContext = this.getContext('list');
-		let item = listContext.list[listContext.selectedIndex];
-		func({ convo: this, item, type: listContext.type });
+		if (this.hasListSelection()) {
+			let listContext = this.getContext('list');
+			let item = listContext.list[listContext.selectedIndex];
+			func({ convo: this, item, type: listContext.type });
+		}
 		return this;
 	}
 
 	getListSelection() {
+		if (!this.hasListSelection()) {
+			return null;
+		}
 		let listContext = this.getContext('list');
 		let item = listContext.list[listContext.selectedIndex];
 		return { item, type: listContext.type, index: listContext.selectedIndex };
