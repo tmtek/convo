@@ -537,4 +537,488 @@ describe('Convo', () => {
 		});
 	});
 
+	describe('#setList', () => {
+		it('Should throw an error if a type or a list is not passed.', () => {
+			assert.throws(() => new Convo().setList());
+			assert.throws(() => new Convo().setList('items'));
+		});
+		it('Should allow a list to be set to be the current contextual list.', () => {
+			let convo = new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3']);
+			assert(convo.getContext('list') && convo.getContext('list').list, 'List is not set into list context.');
+			assert(convo.getContext('list').paging.start === 0 && convo.getContext('list').paging.count === -1, 'Default paging not what\'s expected.');
+		});
+		it('Should allow a contextual list to be overridden by another.', () => {
+			let convo = new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3']);
+			assert(
+				convo.getContext('list') && convo.getContext('list').list && convo.getContext('list').list.length === 3,
+				'List is not set into list context.'
+			);
+			assert(convo.getContext('list').paging.start === 0 && convo.getContext('list').paging.count === -1, 'Default paging not what\'s expected.');
+			convo.setList('items', ['thing 1', 'thing 2'], { start: 1, count: 1 });
+			assert(
+				convo.getContext('list') && convo.getContext('list').list && convo.getContext('list').list.length === 2,
+				'List is not set into list context.'
+			);
+			assert(convo.getContext('list').paging.start === 1 && convo.getContext('list').paging.count === 1, 'Default paging not what\'s expected.');
+		});
+	});
+
+	describe('#updateList', () => {
+		it('Should throw an error if a list is not passed.', () => {
+			assert.throws(() => new Convo().updateList());
+		});
+		it('Should throw an error if there is no contextual list.', () => {
+			assert.throws(() => new Convo().updateList(['test 1', 'test 2']));
+		});
+		it('Should allow an existing contextual list to be updated.', () => {
+			let convo = new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3']);
+			assert(
+				convo.getContext('list') && convo.getContext('list').list && convo.getContext('list').list.length === 3,
+				'List is not set into list context.'
+			);
+			convo.updateList(['thing 1', 'thing 2']);
+			assert(
+				convo.getContext('list') && convo.getContext('list').list && convo.getContext('list').list.length === 2,
+				'List was no updated properly.'
+			);
+		});
+	});
+
+	describe('#clearList', () => {
+		it('Should not throw an error if no contextual list exists.', () => {
+			assert.doesNotThrow(() => new Convo().clearList());
+		});
+		it('Should clear a contextual list out of context.', () => {
+			let convo = new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3']);
+			assert(
+				convo.getContext('list') && convo.getContext('list').list && convo.getContext('list').list.length === 3,
+				'List is not set into list context.'
+			);
+			convo.clearList();
+			assert(
+				!convo.getContext('list'),
+				'List was not cleared properly.'
+			);
+		});
+	});
+
+	describe('#hasList', () => {
+		it('Should return false if there is no contextual list.', () => {
+			assert(!new Convo().hasList(), 'There shouldn\'t be a list right now');
+		});
+		it('Should return false if there is no contextual list and a supplied list type.', () => {
+			assert(!new Convo().hasList('items'), 'There shouldn\'t be a list right now');
+		});
+		it('Should return true if there is a contextual list.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			assert(convo.hasList(), 'There should be a list');
+		});
+		it('Should return true if there is a contextual list with the correct list type.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			assert(convo.hasList('items'), 'There should be a list');
+		});
+		it('Should return false if there is a contextual list with an incorrect list type.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			assert(!convo.hasList('notitems'), 'There should be a list');
+		});
+	});
+
+	describe('#getList', () => {
+		it('Should return null if there is no contextual list.', () => {
+			assert(!new Convo().getList(), 'There shouldn\'t be a list right now');
+		});
+		it('Should return the list if there is a contextual list.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			assert(
+				convo.getList() && convo.getList().list && convo.getList().list.length === 3,
+				'Did not get the correct list.'
+			);
+		});
+	});
+
+	describe('#updateListPaging', () => {
+		it('Should throw an error if there is no contextual list.', () => {
+			assert.throws(() => new Convo().updateListPaging());
+		});
+		it('Should throw an error if there is no contextual list and paging data supplied.', () => {
+			assert.throws(() => new Convo().updateListPaging({ start: 0, count: 1 }));
+		});
+		it('Should set paging to full list if there is a contextual list and no paging data supplied.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3'], { start: 1, count: 1 });
+			assert(
+				convo.getList().paging && convo.getList().paging.start === 1 && convo.getList().paging.count === 1,
+				'Paging data not correct'
+			);
+			convo.updateListPaging();
+			assert(
+				convo.getList().paging && convo.getList().paging.start === 0 && convo.getList().paging.count === -1,
+				'Paging data not correct'
+			);
+		});
+		it('Should allow paging to be updated on an existing contextual list with paging data in range.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			assert(
+				convo.getList().paging && convo.getList().paging.start === 0 && convo.getList().paging.count === -1,
+				'Paging data not correct'
+			);
+			convo.updateListPaging({ start: 1, count: 2 });
+			assert(
+				convo.getList().paging && convo.getList().paging.start === 1 && convo.getList().paging.count === 2,
+				'Paging data not correct'
+			);
+		});
+		it('Should throw error if start value is less than 0.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			assert.throws(() => convo.updateListPaging({ start: -1, count: 2 }));
+		});
+		it('Should throw error if count value is greater than list length.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			assert.throws(() => convo.updateListPaging({ start: 0, count: 10 }));
+		});
+		it('Should allow start to be updated individually.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === -1, 'Paging data not correct.');
+			convo.updateListPaging({ start: 1 });
+			assert(convo.getList().paging.start === 1 && convo.getList().paging.count === -1, 'Paging data not correct.');
+		});
+		it('Should allow count to be updated individually.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === -1, 'Paging data not correct.');
+			convo.updateListPaging({ count: 2 });
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === 2, 'Paging data not correct.');
+		});
+	});
+
+	describe('#nextListPage', () => {
+		it('Should repeat if paging is set to full list.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === -1, 'Pagin data incorrect.');
+			convo.nextListPage();
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === -1, 'Pagin data incorrect.');
+		});
+		it('Should step through list pages by originally set count.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3', 'item 4', 'item 5'], { start: 0, count: 2 });
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === 2, 'Paging data incorrect.');
+			convo.nextListPage();
+			assert(convo.getList().paging.start === 2 && convo.getList().paging.count === 2, 'Paging data incorrect.');
+			convo.nextListPage();
+			assert(convo.getList().paging.start === 4 && convo.getList().paging.count === 2, 'Paging data incorrect.');
+			convo.nextListPage();
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === 2, 'Paging data incorrect.');
+		});
+		it('Should step through list pages by changing counts.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3', 'item 4', 'item 5'], { start: 0, count: 2 });
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === 2, 'Paging data incorrect.');
+			convo.nextListPage(1);
+			assert(convo.getList().paging.start === 2 && convo.getList().paging.count === 1, 'Paging data incorrect.');
+			convo.nextListPage(3);
+			assert(convo.getList().paging.start === 3 && convo.getList().paging.count === 3, 'Paging data incorrect.');
+			convo.nextListPage(5);
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === 5, 'Paging data incorrect.');
+		});
+		it('Should go to full page if count is set to negative.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3'], { start: 0, count: 2 });
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === 2, 'Paging data incorrect.');
+			convo.nextListPage(-5);
+			assert(convo.getList().paging.start === 2 && convo.getList().paging.count === -1, 'Paging data incorrect.');
+			convo.nextListPage();
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === -1, `Paging data incorrect.${convo.getList().paging.start}:${convo.getList().paging.count}`);
+		});
+		it('Should throw error if count changes to something out of range.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3', 'item 4', 'item 5'], { start: 0, count: 2 });
+			assert.throws(() => convo.nextListPage(6));
+		});
+	});
+
+	describe('#prevListPage', () => {
+		it('Should repeat if paging is set to full list.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === -1,  `Paging data incorrect.${convo.getList().paging.start}:${convo.getList().paging.count}`);
+			convo.prevListPage();
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === -1,  `Paging data incorrect.${convo.getList().paging.start}:${convo.getList().paging.count}`);
+		});
+		it('Should step through list pages by originally set count.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3', 'item 4', 'item 5'], { start: 0, count: 2 });
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === 2, 'Paging data incorrect.');
+			convo.prevListPage();
+			assert(convo.getList().paging.start === 3 && convo.getList().paging.count === 2, 'Paging data incorrect.');
+			convo.prevListPage();
+			assert(convo.getList().paging.start === 1 && convo.getList().paging.count === 2, 'Paging data incorrect.');
+			convo.prevListPage();
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === 2, 'Paging data incorrect.');
+			convo.prevListPage();
+			assert(convo.getList().paging.start === 3 && convo.getList().paging.count === 2, 'Paging data incorrect.');
+		});
+		it('Should step through list pages by changing counts.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3', 'item 4', 'item 5'], { start: 0, count: 2 });
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === 2, 'Paging data incorrect.');
+			convo.prevListPage(2);
+			assert(convo.getList().paging.start === 3 && convo.getList().paging.count === 2, 'Paging data incorrect.');
+			convo.prevListPage(3);
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === 3, `Paging data incorrect.${convo.getList().paging.start}:${convo.getList().paging.count}`);
+			convo.prevListPage(5);
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === 5, 'Paging data incorrect.');
+			convo.prevListPage(3);
+			assert(convo.getList().paging.start === 2 && convo.getList().paging.count === 3, 'Paging data incorrect.');
+		});
+		it('Should go to full page if count is set to negative.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3'], { start: 0, count: 2 });
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === 2, 'Paging data incorrect.');
+			convo.prevListPage(1);
+			assert(convo.getList().paging.start === 2 && convo.getList().paging.count === 1, `Paging data incorrect.${convo.getList().paging.start}:${convo.getList().paging.count}`);
+			convo.prevListPage(-5);
+			assert(convo.getList().paging.start === 0 && convo.getList().paging.count === -1, `Paging data incorrect.${convo.getList().paging.start}:${convo.getList().paging.count}`);
+		});
+		it('Should throw error if count changes to something out of range.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3', 'item 4', 'item 5'], { start: 0, count: 2 });
+			assert.throws(() => convo.prevListPage(6));
+		});
+	});
+
+	describe('#forListPage', () => {
+		it('Should output pages based on standard paging calls.', (done) => {
+			new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3', 'item 4', 'item 5'], { start: 0, count: 2 })
+				.forListPage(({ page }) => assert(page.length === 2 && page[0]==='item 1' && page[1]==='item 2', 'paging data incorrect'))
+				.nextListPage()
+				.forListPage(({ page }) => assert(page.length === 2 && page[0]==='item 3' && page[1]==='item 4', 'paging data incorrect'))
+				.nextListPage()
+				.forListPage(({ page }) => assert(page.length === 1 && page[0]==='item 5', 'paging data incorrect'))
+				.nextListPage()
+				.forListPage(({ page }) => assert(page.length === 2 && page[0]==='item 1' && page[1]==='item 2', 'paging data incorrect'))
+				.promise(c => {
+					done();
+					return c;
+				});
+		});
+		it('Should not call function if no list is set.', (done) => {
+			let doneCalled = false;
+			new Convo()
+				.forListPage(({ page }) => {
+					doneCalled = true;
+					done(new Error('This method should not be called.'));
+				})
+				.promise(c => {
+					!doneCalled && done();
+					return c;
+				});
+		});
+	});
+
+	describe('#forList', () => {
+		it('Should output entire list.', (done) => {
+			new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3', 'item 4', 'item 5'], { start: 0, count: 2 })
+				.forList(({ list }) => assert(
+					list.length === 5 &&
+					list[0]==='item 1' && list[1]==='item 2' && list[2]==='item 3' && list[3]==='item 4' && list[4]==='item 5',
+					'paging data incorrect'
+				))
+				.promise(c => {
+					done();
+					return c;
+				});
+		});
+		it('Should not call function if no list is set.', (done) => {
+			let doneCalled = false;
+			new Convo()
+				.forList(({ list }) => {
+					doneCalled = true;
+					done(new Error('This method should not be called.'));
+				})
+				.promise(c => {
+					!doneCalled && done();
+					return c;
+				});
+		});
+	});
+
+	describe('#selectFromList', () => {
+		it('Should have nothing selected by default if contextual list exists.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3', 'item 4', 'item 5']);
+			assert(convo.getList().selectedIndex === -1, 'selectedIndex is not -1');
+		});
+		it('Should throw error if no contextual list exists.', () => {
+			assert.throws(() => new Convo().selectFromList(0));
+		});
+		it('Should allow items to be selected if contextual list exists', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			convo.selectFromList(0);
+			assert(
+				convo.getList().selectedIndex === 0 && convo.getList().list[convo.getList().selectedIndex]=== 'item 1',
+				'selectedIndex is not 0'
+			);
+			convo.selectFromList(1);
+			assert(
+				convo.getList().selectedIndex === 1 && convo.getList().list[convo.getList().selectedIndex]=== 'item 2',
+				'selectedIndex is not 1'
+			);
+			convo.selectFromList(2);
+			assert(
+				convo.getList().selectedIndex === 2 && convo.getList().list[convo.getList().selectedIndex]=== 'item 3',
+				'selectedIndex is not 2'
+			);
+		});
+		it('Should throw error if index is out of range.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			assert.throws(() => convo.selectFromList(3));
+		});
+		it('Should select first item if no index is passed', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			convo.selectFromList();
+			assert(
+				convo.getList().selectedIndex === 0 && convo.getList().list[convo.getList().selectedIndex]=== 'item 1',
+				'selectedIndex is not 0'
+			);
+		});
+		it('Should clear selection if index is less than 0', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			convo.selectFromList(0);
+			assert(
+				convo.getList().selectedIndex === 0 && convo.getList().list[convo.getList().selectedIndex]=== 'item 1',
+				'selectedIndex is not 0'
+			);
+			convo.selectFromList(-2);
+			assert(
+				convo.getList().selectedIndex === -1,
+				'selectedIndex is not -1'
+			);
+		});
+	});
+
+	describe('#selectFromListPage', () => {
+		it('Should throw error if no contextual list exists.', () => {
+			assert.throws(() => new Convo().selectFromListPage(0));
+		});
+	});
+
+	describe('#selectNextFromList', () => {
+		it('Should throw error if no contextual list exists.', () => {
+			assert.throws(() => new Convo().selectNextFromList());
+		});
+		it('Should select first item if no selection exists', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			convo.selectNextFromList();
+			assert(
+				convo.getList().selectedIndex === 0 && convo.getList().list[convo.getList().selectedIndex]=== 'item 1',
+				'selectedIndex is not 0'
+			);
+		});
+		it('Should step through items on contextual list', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			convo.selectNextFromList();
+			assert(
+				convo.getList().selectedIndex === 0 && convo.getList().list[convo.getList().selectedIndex] === 'item 1',
+				'selectedIndex is not 0'
+			);
+			convo.selectNextFromList();
+			assert(
+				convo.getList().selectedIndex === 1 && convo.getList().list[convo.getList().selectedIndex] === 'item 2',
+				'selectedIndex is not 1'
+			);
+			convo.selectNextFromList();
+			assert(
+				convo.getList().selectedIndex === 2 && convo.getList().list[convo.getList().selectedIndex] === 'item 3',
+				'selectedIndex is not 2'
+			);
+			convo.selectNextFromList();
+			assert(
+				convo.getList().selectedIndex === 0 && convo.getList().list[convo.getList().selectedIndex] === 'item 1',
+				'selectedIndex is not 0'
+			);
+		});
+	});
+
+	describe('#selectPrevFromList', () => {
+		it('Should throw error if no contextual list exists.', () => {
+			assert.throws(() => new Convo().selectPrevFromList());
+		});
+		it('Should select last item if no selection exists', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			convo.selectPrevFromList();
+			assert(
+				convo.getList().selectedIndex === 2 && convo.getList().list[convo.getList().selectedIndex]=== 'item 3',
+				'selectedIndex is not 0'
+			);
+		});
+		it('Should step through items on contextual list', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			convo.selectPrevFromList();
+			assert(
+				convo.getList().selectedIndex === 2 && convo.getList().list[convo.getList().selectedIndex] === 'item 3',
+				'selectedIndex is not 2'
+			);
+			convo.selectPrevFromList();
+			assert(
+				convo.getList().selectedIndex === 1 && convo.getList().list[convo.getList().selectedIndex] === 'item 2',
+				'selectedIndex is not 1'
+			);
+			convo.selectPrevFromList();
+			assert(
+				convo.getList().selectedIndex === 0 && convo.getList().list[convo.getList().selectedIndex] === 'item 1',
+				'selectedIndex is not 0'
+			);
+			convo.selectPrevFromList();
+			assert(
+				convo.getList().selectedIndex === 2 && convo.getList().list[convo.getList().selectedIndex] === 'item 3',
+				'selectedIndex is not 2'
+			);
+		});
+	});
+
+	describe('#hasListSelection', () => {
+		it('Should return false if no contextual list exists.', () => {
+			assert(
+				!new Convo().hasListSelection(),
+				'there should be no selection.'
+			);
+		});
+		it('Should return false if no selection exists.', () => {
+			let convo = new Convo().setList('items', ['item 1', 'item 2', 'item 3']);
+			assert(
+				!convo.hasListSelection(),
+				'there should be no selection.'
+			);
+		});
+		it('Should return true if there is a selection.', () => {
+			let convo = new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3'])
+				.selectFromList(0);
+			assert(
+				convo.hasListSelection(),
+				'there should be a selection.'
+			);
+		});
+	});
+
+	describe('#clearListSelection', () => {
+		it('Should return false if no contextual list exists.', () => {
+			assert.throws(() => new Convo().clearListSelection());
+		});
+		it('Should return false if no selection exists.', () => {
+			let convo = new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3']);
+			assert.doesNotThrow(() => convo.clearListSelection());
+		});
+		it('Should clear selection if one exists.', () => {
+			let convo = new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3'])
+				.selectFromList(0);
+			assert(
+				convo.hasListSelection(),
+				'there should be a selection.'
+			);
+			convo.clearListSelection();
+			assert(
+				!convo.hasListSelection(),
+				'there should be no selection.'
+			);
+		});
+	});
+
+
 });

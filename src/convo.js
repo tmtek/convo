@@ -301,6 +301,9 @@ class Convo {
 	}
 
 	setList(type, list, paging = { start: 0, count: -1 }){
+		if (!type  || !list) {
+			throw new Error('You must submit a type and a list to setList()');
+		}
 		this.setContext('list', 10, {
 			type,
 			list,
@@ -311,7 +314,13 @@ class Convo {
 	}
 
 	updateList(list){
+		if (!list) {
+			throw new Error('You must pass a list to updateList()');
+		}
 		let listContext = this.getContext('list');
+		if (!listContext) {
+			throw new Error('There is no list to update.');
+		}
 		this.setContext('list', 10, {
 			type: listContext.type,
 			list,
@@ -322,7 +331,9 @@ class Convo {
 	}
 
 	clearList() {
-		this.clearListSelection();
+		if (this.hasListSelection()) {
+			this.clearListSelection();
+		}
 		this.setContext('list', 0, null);
 		return this;
 	}
@@ -339,18 +350,29 @@ class Convo {
 	}
 
 	updateListPaging(paging = { start: 0, count: -1 }){
-		if (this.hasList()){
-			let listContext = this.getContext('list');
-			listContext.paging = paging;
-			this.setContext('list', 10, listContext);
+		if (!this.hasList()){
+			throw new Error('There is no list to update.');
 		}
+		let listContext = this.getContext('list');
+
+		if (paging.start && paging.start < 0) {
+			throw new Error('paging start value is out of range.');
+		}
+		if (paging.count && paging.count > listContext.list.length) {
+			throw new Error('paging count value is out of range.');
+		}
+		listContext.paging = {
+			start: !isNaN(paging.start) ? paging.start : listContext.paging.start,
+			count: !isNaN(paging.count) ? paging.count : listContext.paging.count
+		};
+		this.setContext('list', 10, listContext);
 		return this;
 	}
 
-	nextListPage(count = -1){
+	nextListPage(count = 0){
 		let listContext = this.getContext('list');
-		let newCount = count <= 0 ? listContext.paging.count : count;
-		let newIndex = listContext.paging.start + listContext.paging.count;
+		let newCount = count === 0 ? listContext.paging.count : count < 0 ? -1: count;
+		let newIndex = listContext.paging.start + (listContext.paging.count <= 0 ? listContext.list.length: listContext.paging.count);
 		if (newIndex >= listContext.list.length || newIndex < 0) {
 			newIndex = 0;
 		}
@@ -361,15 +383,15 @@ class Convo {
 		return this;
 	}
 
-	prevListPage(count = -1){
+	prevListPage(count = 0){
 		let listContext = this.getContext('list');
-		let newCount = count <= 0 ? listContext.paging.count : count;
+		let newCount = count === 0 ? listContext.paging.count : (count < 0 ? -1 : count);
 		let newIndex = 0;
 		if (listContext.paging.start <= 0) {
-			newIndex = listContext.list.length - newCount;
+			newIndex = listContext.list.length - (newCount <= 0 ? listContext.list.length : newCount);
 		}
 		else {
-			newIndex = listContext.paging.start - listContext.paging.count;
+			newIndex = listContext.paging.start - (newCount <= 0 ? listContext.list.length : newCount);
 			if (newIndex < 0) {
 				newIndex = 0;
 			}
@@ -389,14 +411,20 @@ class Convo {
 			let page = listContext.list.slice(paging.start, Math.min(paging.start + count, listContext.list.length));
 			func({ convo: this, page, paging, list: listContext.list, type: listContext.type });
 		}
-		else {
-			func({ convo: this });
-		}
 		return this;
 	}
 
 	selectFromList(index = 0){
+		if (!this.hasList()) {
+			throw new Error('Can\'t select an item if there\'s no list.');
+		}
+		if (index < 0) {
+			return this.clearListSelection();
+		}
 		let listContext = this.getContext('list');
+		if (index > listContext.list.length -1) {
+			throw new Error('Selected index is out of range.');
+		}
 		listContext.selectedIndex = index;
 		this.setContext('list', 10, listContext);
 		this.setContext(`list_select_${listContext.type}`, 10, { active: true });
@@ -420,13 +448,13 @@ class Convo {
 			let listContext = this.getContext('list');
 			func({ convo: this, list: listContext.list, type: listContext.type });
 		}
-		else {
-			func({ convo: this });
-		}
 		return this;
 	}
 
 	clearListSelection() {
+		if (!this.hasList()) {
+			throw new Error('Can\'t clear selection when there is no list.');
+		}
 		let listContext = this.getContext('list');
 		if (listContext) {
 			this.getContext('list').selectedIndex = -1;
@@ -459,12 +487,18 @@ class Convo {
 	}
 
 	selectNextFromList(){
+		if (!this.hasList()) {
+			throw new Error('Can\'t make selection if there is no list.');
+		}
 		let listContext = this.getContext('list');
 		return this.selectFromList(listContext.selectedIndex + 1 >= listContext.list.length ?
 			0 : listContext.selectedIndex + 1);
 	}
 
 	selectPrevFromList(){
+		if (!this.hasList()) {
+			throw new Error('Can\'t make selection if there is no list.');
+		}
 		let listContext = this.getContext('list');
 		return this.selectFromList(listContext.selectedIndex -1 < 0 ?
 			listContext.list.length -1 : listContext.selectedIndex -1);
