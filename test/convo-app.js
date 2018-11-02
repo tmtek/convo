@@ -1,5 +1,6 @@
 let { Convo } = require('../src/convo');
 let { ConvoApp } = require('../src/convo-app');
+let { ConvoTest } = require('../src/convo-test');
 let assert = require('assert');
 
 describe('ConvoApp', () => {
@@ -261,8 +262,7 @@ describe('ConvoApp', () => {
 				}
 
 			}
-			let didError = false;
-			new MyApp()
+			ConvoTest.testConversation(new MyApp()
 				.intent(new Convo(), 'applyList')
 				.then(({ app, convo, requests }) => app.intent(new Convo(convo), 'list_repeat'))
 				.then(({ app, convo, requests }) => {
@@ -275,11 +275,7 @@ describe('ConvoApp', () => {
 					assert(listLength === 5);
 					return { app, convo, requests };
 				})
-				.catch(err => {
-					didError = true;
-					return done(err);
-				})
-				.then(() => !didError && done());
+			, done);
 		});
 		it('Should be able to page through list with list_next and have it loop back.', (done) => {
 			let list = ['test 1', 'test 2', 'test 3', 'test 4', 'test 5'];
@@ -301,7 +297,7 @@ describe('ConvoApp', () => {
 				}
 
 			}
-			new MyApp()
+			ConvoTest.testConversation(new MyApp()
 				.intent(new Convo(), 'applyList')
 				.then(({ app, convo, requests }) => {
 					assert(requests && requests.length > 0);
@@ -346,7 +342,7 @@ describe('ConvoApp', () => {
 					assert(listLength === 5);
 					return { app, convo, requests };
 				})
-				.then(() => done());
+			, done);
 		});
 		it('Should be able to page through list with list_prev and have it loop back.', (done) => {
 			let list = ['test 1', 'test 2', 'test 3', 'test 4', 'test 5'];
@@ -368,8 +364,7 @@ describe('ConvoApp', () => {
 				}
 
 			}
-			let didError = false;
-			new MyApp()
+			ConvoTest.testConversation(new MyApp()
 				.intent(new Convo(), 'applyList')
 				.then(({ app, convo, requests }) => {
 					assert(requests && requests.length > 0);
@@ -414,11 +409,7 @@ describe('ConvoApp', () => {
 					assert(listLength === 5);
 					return { app, convo, requests };
 				})
-				.catch(err => {
-					didError = true;
-					return done(err);
-				})
-				.then(() => !didError && done());
+			, done);
 		});
 		it('Should be able to page through list with list_next and have it loop back while changing page sizes.', (done) => {
 			let list = ['test 1', 'test 2', 'test 3', 'test 4', 'test 5'];
@@ -440,7 +431,7 @@ describe('ConvoApp', () => {
 				}
 
 			}
-			new MyApp()
+			ConvoTest.testConversation(new MyApp()
 				.intent(new Convo(), 'applyList')
 				.then(({ app, convo, requests }) => {
 					assert(requests && requests.length > 0);
@@ -485,7 +476,7 @@ describe('ConvoApp', () => {
 					assert(listLength === 5);
 					return { app, convo, requests };
 				})
-				.then(() => done());
+			, done);
 		});
 		it('Should be able to page through list with list_prev and have it loop back while changing page sizes.', (done) => {
 			let list = ['test 1', 'test 2', 'test 3', 'test 4', 'test 5'];
@@ -507,8 +498,7 @@ describe('ConvoApp', () => {
 				}
 
 			}
-			let didError = false;
-			new MyApp()
+			ConvoTest.testConversation(new MyApp()
 				.intent(new Convo(), 'applyList')
 				.then(({ app, convo, requests }) => {
 					assert(requests && requests.length > 0);
@@ -553,11 +543,7 @@ describe('ConvoApp', () => {
 					assert(listLength === 5);
 					return { app, convo, requests };
 				})
-				.catch(err => {
-					didError = true;
-					return done(err);
-				})
-				.then(() => !didError && done());
+			, done);
 		});
 		it('Should be able to use list_all to move from a paged list to full list.', (done) => {
 			let list = ['test 1', 'test 2', 'test 3', 'test 4', 'test 5'];
@@ -579,8 +565,7 @@ describe('ConvoApp', () => {
 				}
 
 			}
-			let didError = false;
-			new MyApp()
+			ConvoTest.testConversation(new MyApp()
 				.intent(new Convo(), 'applyList')
 				.then(({ app, convo, requests }) => {
 					assert(requests && requests.length > 0);
@@ -603,11 +588,7 @@ describe('ConvoApp', () => {
 					assert(listLength === 5);
 					return { app, convo, requests };
 				})
-				.catch(err => {
-					didError = true;
-					return done(err);
-				})
-				.then(() => !didError && done());
+			, done);
 		});
 		it('Should be able to use list_select to select an item in the full list.', (done) => {
 			let list = ['test 1', 'test 2', 'test 3', 'test 4', 'test 5'];
@@ -634,8 +615,7 @@ describe('ConvoApp', () => {
 					}));
 				}
 			}
-			let didError = false;
-			new MyApp()
+			ConvoTest.testConversation(new MyApp()
 				.intent(new Convo(), 'applyList')
 				.then(({ app, convo, requests }) => app.intent(new Convo(convo), 'list_select', { index: 2 }))
 				.then(({ app, convo, requests }) => {
@@ -645,11 +625,7 @@ describe('ConvoApp', () => {
 					assert(item === 'test 2', `Was actually ${item}`);
 					return { app, convo, requests };
 				})
-				.catch(err => {
-					didError = true;
-					return done(err);
-				})
-				.then(() => !didError && done());
+			, done);
 		});
 		it('Should be able to use list_select_ui to select an item in the full list.', (done) => {
 			let list = ['test 1', 'test 2', 'test 3', 'test 4', 'test 5'];
@@ -676,8 +652,7 @@ describe('ConvoApp', () => {
 					}));
 				}
 			}
-			let didError = false;
-			new MyApp()
+			ConvoTest.testConversation(new MyApp()
 				.intent(new Convo(), 'applyList')
 				.then(({ app, convo, requests }) => app.intent(new Convo(convo), 'list_select_ui', null, 'item_1'))
 				.then(({ app, convo, requests }) => {
@@ -687,11 +662,7 @@ describe('ConvoApp', () => {
 					assert(item === 'test 2', `Was actually ${item}`);
 					return { app, convo, requests };
 				})
-				.catch(err => {
-					didError = true;
-					return done(err);
-				})
-				.then(() => !didError && done());
+			, done);
 		});
 		it('Should be able to use list_select to select an item in on a list page.', (done) => {
 			let list = ['test 1', 'test 2', 'test 3', 'test 4', 'test 5'];
@@ -718,8 +689,7 @@ describe('ConvoApp', () => {
 					}));
 				}
 			}
-			let didError = false;
-			new MyApp()
+			ConvoTest.testConversation(new MyApp()
 				.intent(new Convo(), 'applyList')
 				.then(({ app, convo, requests }) => app.intent(new Convo(convo), 'list_select', { index: 2 }))
 				.then(({ app, convo, requests }) => {
@@ -729,11 +699,7 @@ describe('ConvoApp', () => {
 					assert(item === 'test 4', `Was actually ${item}`);
 					return { app, convo, requests };
 				})
-				.catch(err => {
-					didError = true;
-					return done(err);
-				})
-				.then(() => !didError && done());
+			, done);
 		});
 		it('Should be able select the next item after a currently select one with list_select_next and have it loop.', (done) => {
 			let list = ['test 1', 'test 2', 'test 3', 'test 4', 'test 5'];
@@ -760,8 +726,7 @@ describe('ConvoApp', () => {
 					}));
 				}
 			}
-			let didError = false;
-			new MyApp()
+			ConvoTest.testConversation(new MyApp()
 				.intent(new Convo(), 'applyList')
 				.then(({ app, convo, requests }) => app.intent(new Convo(convo), 'list_select', { index: 2 }))
 				.then(({ app, convo, requests }) => {
@@ -803,11 +768,7 @@ describe('ConvoApp', () => {
 					assert(item === 'test 1', `Was actually ${item}`);
 					return { app, convo, requests };
 				})
-				.catch(err => {
-					didError = true;
-					return done(err);
-				})
-				.then(() => !didError && done());
+			, done);
 		});
 		it('Should be able select the previous item before a currently select one with list_select_prev and have it loop.', (done) => {
 			let list = ['test 1', 'test 2', 'test 3', 'test 4', 'test 5'];
@@ -834,8 +795,8 @@ describe('ConvoApp', () => {
 					}));
 				}
 			}
-			let didError = false;
-			new MyApp()
+
+			ConvoTest.testConversation(new MyApp()
 				.intent(new Convo(), 'applyList')
 				.then(({ app, convo, requests }) => app.intent(new Convo(convo), 'list_select', { index: 2 }))
 				.then(({ app, convo, requests }) => {
@@ -877,11 +838,7 @@ describe('ConvoApp', () => {
 					assert(item === 'test 3', `Was actually ${item}`);
 					return { app, convo, requests };
 				})
-				.catch(err => {
-					didError = true;
-					return done(err);
-				})
-				.then(() => !didError && done());
+			, done);
 		});
 	});
 
@@ -921,19 +878,14 @@ describe('ConvoApp', () => {
 					];
 				}
 			}
-			let didError = false;
-			new MyApp()
+			ConvoTest.testConversation(new MyApp()
 				.intent(new Convo(), 'help')
 				.then(({ app, convo, requests }) => {
 					assert(requests && requests.length > 0);
 					assert(convo.hasList('help'));
 					return { app, convo, requests };
 				})
-				.catch(err => {
-					didError = true;
-					return done(err);
-				})
-				.then(() => !didError && done());
+			, done);
 		});
 	});
 
