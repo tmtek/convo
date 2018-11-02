@@ -1,6 +1,6 @@
 {
   "name": "@tmtek/convo",
-  "version": "0.2.20",
+  "version": "0.2.21",
   "description": "A uility for building conversational responses in DialogFlow fufillments",
   "main": "index.js",
   "scripts": {
