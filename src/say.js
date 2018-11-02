@@ -1,13 +1,13 @@
 class Say {
 
 	static ensureSentence(sentence) {
-		if (!/\.$/.test(sentence)) {
+		if (!/[.!?]$/.test(sentence)) {
 			return `${sentence}.`;
 		}
 		return sentence;
 	}
 
-	static listPageResponse(page, paging, list, textForItemFunc, delimiter = ', ') {
+	static listPageResponse(page, paging, list, textForItemFunc = item => item.toString(), delimiter = ', ') {
 		if (!page || !list || page.length <= 0 || list.length <= 0) {
 			return 'The list is empty.';
 		}
@@ -61,7 +61,6 @@ class Say {
 	toString() {
 		return this.str.trim();
 	}
-
 }
 
 module.exports = { Say };

@@ -2,8 +2,8 @@ const { Say } = require('./say');
 
 class Convo {
 
-	static mockConv() {
-		return {
+	static mockConv(populateFunc = conv => conv) {
+		let conv = {
 			surface: {
 				capabilities: {
 					has: () => true
@@ -22,6 +22,8 @@ class Convo {
 			},
 			contexts: {}
 		};
+		populateFunc(conv);
+		return conv;
 	}
 
 	static setClassMappings(mappings) {
@@ -66,11 +68,8 @@ class Convo {
 	}
 
 	static complete(convo, action = 'close', options = { log: false, logFunc: null }) {
-		if (!convo.conv){
-			if (options.log) {
-				console.log(`${action}:${JSON.stringify(convo, null, 1)}`);
-			}
-			return Promise.resolve(convo);
+		if (!convo.conv) {
+			throw new Error('You must submit a Convo object to .ask() or .close()');
 		}
 		let finalText = convo._write.reduce((acc, text) => acc.sentence(text), new Say()).toString().trim();
 		let finalSpeech = convo._speak.reduce((acc, text) => acc.sentence(text), new Say()).toString().trim();
@@ -78,15 +77,16 @@ class Convo {
 		let textWasPopulated = !!(finalText || finalSpeech);
 
 		let isRunningInDialogFlow = typeof convo.conv[action] === 'function';
-		let convoFunc = isRunningInDialogFlow ? obj => convo.conv[action](obj) : resp => {
+		let convoFunc = isRunningInDialogFlow ? payload => convo.conv[action](payload) : payload => {
 			if (options.log) {
 				if (options.logFunc) {
-					options.logFunc(action, resp);
+					options.logFunc(action, payload);
 				}
 				else {
-					console.log(`${action}:${JSON.stringify(resp, null, 1)}`);
+					console.log(`${action}:${JSON.stringify(payload, null, 1)}`);
 				}
 			}
+			return { action, payload };
 		};
 
 		if (textWasPopulated) {
@@ -121,7 +121,7 @@ class Convo {
 			}
 		});
 
-		return isRunningInDialogFlow ? Promise.all(promises) : Promise.all(promises).then(() => convo);
+		return isRunningInDialogFlow ? Promise.all(promises) : Promise.all(promises).then(requests => ({ convo, requests }));
 	}
 
 	/* eslint-enable new-cap */
@@ -129,7 +129,6 @@ class Convo {
 		if (isPromise(obj)) {
 			return obj.then(result => this.prepComplete(result, action, options));
 		}
-
 		return this.complete(obj, action, options);
 	}
 
@@ -142,7 +141,7 @@ class Convo {
 	}
 
 	constructor(obj) {
-		this.conv = !obj ? Convo.mockConv() : this.copyConvo(obj);
+		this.conv = !obj ? Convo.mockConv() : (obj.conv ? this.copyConvo(obj): obj);
 		this.clear();
 	}
 
@@ -195,8 +194,15 @@ class Convo {
 	 * Guarantee that func returns a promise
 	 * @param {Function} func
 	 */
-	promise(func) {
-		return Promise.resolve().then(() => func(this) );
+	promise(func = c => c) {
+		return Promise.resolve()
+			.then(() => func(this) )
+			.then(c => {
+				if (!c.conv) {
+					throw new Error('Must return a Convo object!');
+				}
+				return c;
+			});
 	}
 
 	setAccessToken(token) {
@@ -210,8 +216,21 @@ class Convo {
 		return this;
 	}
 
-	getContext(context) {
+	getAccessToken() {
+		if (this.conv && this.conv.user && this.conv.user.access && this.conv.user.access.token) {
+			return this.conv.user.access.token;
+		}
+		return null;
+	}
 
+	hasAccessToken() {
+		return this.getAccessToken() !== null;
+	}
+
+	getContext(context) {
+		if (!context) {
+			throw new Error('You must provide a context to getContext()');
+		}
 		if (this._tmpContexts && this._tmpContexts[context]){
 			return this._tmpContexts[context];
 		}
@@ -223,10 +242,10 @@ class Convo {
 		if (rContext && rContext.parameters) {
 			return rContext.parameters;
 		}
-		return {};
+		return null;
 	}
 
-	setContext(context, lifespan, parameters) {
+	setContext(context, lifespan = null, parameters = null) {
 		if (!this._tmpContexts) {
 			this._tmpContexts = {};
 		}
@@ -236,7 +255,7 @@ class Convo {
 				this.conv.contexts.set(context, lifespan, parameters);
 			}
 			else {
-				this.conv.contexts[context] = { lifespan, parameters };
+				this.conv.contexts[context] = parameters ? { lifespan, parameters } : null;
 			}
 		}
 		return this;
@@ -248,7 +267,7 @@ class Convo {
 
 	setStorage(data) {
 		if (this.conv && this.conv.user) {
-			this.conv.user.storage = data;
+			this.conv.user.storage = data ? data : {};
 		}
 		return this;
 	}
@@ -282,6 +301,9 @@ class Convo {
 	}
 
 	setList(type, list, paging = { start: 0, count: -1 }){
+		if (!type  || !list) {
+			throw new Error('You must submit a type and a list to setList()');
+		}
 		this.setContext('list', 10, {
 			type,
 			list,
@@ -292,7 +314,13 @@ class Convo {
 	}
 
 	updateList(list){
+		if (!list) {
+			throw new Error('You must pass a list to updateList()');
+		}
 		let listContext = this.getContext('list');
+		if (!listContext) {
+			throw new Error('There is no list to update.');
+		}
 		this.setContext('list', 10, {
 			type: listContext.type,
 			list,
@@ -303,28 +331,48 @@ class Convo {
 	}
 
 	clearList() {
-		this.clearListSelection();
+		if (this.hasListSelection()) {
+			this.clearListSelection();
+		}
 		this.setContext('list', 0, null);
 		return this;
 	}
 
-	hasList() {
+	hasList(type = null) {
+		if (type && this.hasList()) {
+			return type === this.getContext('list').type;
+		}
 		return this.getContext('list') && this.getContext('list').list;
 	}
 
+	getList() {
+		return this.getContext('list');
+	}
+
 	updateListPaging(paging = { start: 0, count: -1 }){
-		if (this.hasList()){
-			let listContext = this.getContext('list');
-			listContext.paging = paging;
-			this.setContext('list', 10, listContext);
+		if (!this.hasList()){
+			throw new Error('There is no list to update.');
 		}
+		let listContext = this.getContext('list');
+
+		if (paging.start && paging.start < 0) {
+			throw new Error('paging start value is out of range.');
+		}
+		if (paging.count && paging.count > listContext.list.length) {
+			throw new Error('paging count value is out of range.');
+		}
+		listContext.paging = {
+			start: !isNaN(paging.start) ? paging.start : listContext.paging.start,
+			count: !isNaN(paging.count) ? paging.count : listContext.paging.count
+		};
+		this.setContext('list', 10, listContext);
 		return this;
 	}
 
-	nextListPage(count = -1){
+	nextListPage(count = 0){
 		let listContext = this.getContext('list');
-		let newCount = count <= 0 ? listContext.paging.count : count;
-		let newIndex = listContext.paging.start + listContext.paging.count;
+		let newCount = count === 0 ? listContext.paging.count : count < 0 ? -1: count;
+		let newIndex = listContext.paging.start + (listContext.paging.count <= 0 ? listContext.list.length: listContext.paging.count);
 		if (newIndex >= listContext.list.length || newIndex < 0) {
 			newIndex = 0;
 		}
@@ -335,15 +383,15 @@ class Convo {
 		return this;
 	}
 
-	prevListPage(count = -1){
+	prevListPage(count = 0){
 		let listContext = this.getContext('list');
-		let newCount = count <= 0 ? listContext.paging.count : count;
+		let newCount = count === 0 ? listContext.paging.count : (count < 0 ? -1 : count);
 		let newIndex = 0;
 		if (listContext.paging.start <= 0) {
-			newIndex = listContext.list.length - newCount;
+			newIndex = listContext.list.length - (newCount <= 0 ? listContext.list.length : newCount);
 		}
 		else {
-			newIndex = listContext.paging.start - listContext.paging.count;
+			newIndex = listContext.paging.start - (newCount <= 0 ? listContext.list.length : newCount);
 			if (newIndex < 0) {
 				newIndex = 0;
 			}
@@ -363,14 +411,20 @@ class Convo {
 			let page = listContext.list.slice(paging.start, Math.min(paging.start + count, listContext.list.length));
 			func({ convo: this, page, paging, list: listContext.list, type: listContext.type });
 		}
-		else {
-			func({ convo: this });
-		}
 		return this;
 	}
 
 	selectFromList(index = 0){
+		if (!this.hasList()) {
+			throw new Error('Can\'t select an item if there\'s no list.');
+		}
+		if (index < 0) {
+			return this.clearListSelection();
+		}
 		let listContext = this.getContext('list');
+		if (index > listContext.list.length -1) {
+			throw new Error('Selected index is out of range.');
+		}
 		listContext.selectedIndex = index;
 		this.setContext('list', 10, listContext);
 		this.setContext(`list_select_${listContext.type}`, 10, { active: true });
@@ -394,13 +448,13 @@ class Convo {
 			let listContext = this.getContext('list');
 			func({ convo: this, list: listContext.list, type: listContext.type });
 		}
-		else {
-			func({ convo: this });
-		}
 		return this;
 	}
 
 	clearListSelection() {
+		if (!this.hasList()) {
+			throw new Error('Can\'t clear selection when there is no list.');
+		}
 		let listContext = this.getContext('list');
 		if (listContext) {
 			this.getContext('list').selectedIndex = -1;
@@ -410,6 +464,9 @@ class Convo {
 	}
 
 	selectFromListPage(index = 0){
+		if (index < 0) {
+			throw new Error('Can\'t select and index less than 0.');
+		}
 		let listContext = this.getContext('list');
 		return this.selectFromList(listContext.paging.start + index);
 	}
@@ -420,25 +477,36 @@ class Convo {
 	}
 
 	forListSelection(func) {
-		let listContext = this.getContext('list');
-		let item = listContext.list[listContext.selectedIndex];
-		func({ convo: this, item, type: listContext.type });
+		if (this.hasListSelection()) {
+			let listContext = this.getContext('list');
+			let item = listContext.list[listContext.selectedIndex];
+			func({ convo: this, item, type: listContext.type });
+		}
 		return this;
 	}
 
 	getListSelection() {
+		if (!this.hasListSelection()) {
+			return null;
+		}
 		let listContext = this.getContext('list');
 		let item = listContext.list[listContext.selectedIndex];
 		return { item, type: listContext.type, index: listContext.selectedIndex };
 	}
 
 	selectNextFromList(){
+		if (!this.hasList()) {
+			throw new Error('Can\'t make selection if there is no list.');
+		}
 		let listContext = this.getContext('list');
 		return this.selectFromList(listContext.selectedIndex + 1 >= listContext.list.length ?
 			0 : listContext.selectedIndex + 1);
 	}
 
 	selectPrevFromList(){
+		if (!this.hasList()) {
+			throw new Error('Can\'t make selection if there is no list.');
+		}
 		let listContext = this.getContext('list');
 		return this.selectFromList(listContext.selectedIndex -1 < 0 ?
 			listContext.list.length -1 : listContext.selectedIndex -1);

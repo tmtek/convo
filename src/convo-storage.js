@@ -3,11 +3,14 @@ const { Convo } = require('./convo');
 
 class ConvoStorage {
 	constructor(filename) {
+		if (!filename) {
+			throw new Error('ConvoStorage requires a filename to write to.');
+		}
 		this._filename = filename;
 	}
 
 	load(callback) {
-		new Promise((resolve, reject) => {
+		return new Promise((resolve, reject) => {
 			if (!this._filename) {
 				resolve({});
 				return;

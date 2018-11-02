@@ -7,15 +7,19 @@ class ConvoApp {
 		if (!value) {
 			return value;
 		}
-		return (typeof value === 'string' || value instanceof String) ? parseInt(value, 10) : value;
+		return (typeof value === 'string' || value instanceof String) ? parseInt(value, 10) : isNaN(value) ? null : value;
 	}
 
 	static correctForZeroIndex(value) {
+		if (value === undefined || value === null || typeof value !== 'number') {
+			throw new Error('can\'t correct for a value that is not a number.');
+		}
 		return value >= 1 ? value -1 : value;
 	}
 
 	constructor() {
-		this.registeredIntents = [];
+		//this.registeredIntents = [];
+		this.registeredIntents = {};
 		this.onRegisterIntents();
 		this._help = this.onPrepareHelp();
 	}
@@ -28,19 +32,42 @@ class ConvoApp {
 	onRegisterIntents() {}
 
 	registerIntent(intent, intentHandler) {
-		this.registeredIntents.push({ intent, intentHandler });
+		if (!intent || !intentHandler) {
+			throw new Error('You must submit an intent and intent handler.');
+		}
+		//this.registeredIntents.push({ intent, intentHandler });
+		this.registeredIntents[intent] = intentHandler;
+		return this;
 	}
 
 	bind(dialogFlowApp) {
-		this.registeredIntents.forEach(({ intent, intentHandler }) => {
+		Object.keys(this.registeredIntents).map(key => ({
+			intent: key,
+			intentHandler: this.registeredIntents[key]
+		})).forEach(({ intent, intentHandler }) => {
 			dialogFlowApp.intent(intent, (conv, params, extra) => intentHandler(new Convo(conv), params, extra));
 		});
 		return dialogFlowApp;
 	}
 
 	intent(convo, intent, params = {}, option = {}, debugOptions = {}){
-		let registeredIntent = this.registeredIntents.filter(registeredIntent => registeredIntent.intent === intent)[0];
-		return registeredIntent.intentHandler(convo, params, option, debugOptions).then(convo => ({ app: this, convo }));
+		//let registeredIntent = this.registeredIntents.filter(registeredIntent => registeredIntent.intent === intent)[0];
+		//return registeredIntent.intentHandler(convo, params, option, debugOptions).then(convo => ({ app: this, convo }));
+		if (!convo || !intent) {
+			throw new Error('You must submit a Convo and an intent.');
+		}
+		if (!this.registeredIntents[intent]) {
+			return Promise.resolve({ app: this, convo });
+		}
+		return Promise.resolve(
+			this.registeredIntents[intent](convo, params, option, debugOptions)
+		)
+			.then(resp => {
+				((debugOptions && debugOptions.log) && (!resp ||!resp.requests || resp.requests.length === 0)) && console.warn(
+					`intent:'${intent}' will cause Dialogflow to throw an error because you are not sending any repsonse to the user.`
+				);
+				return { app: this, convo, requests: resp && resp.requests };
+			});
 	}
 
 	registerListIntents() {
@@ -105,6 +132,11 @@ class ConvoApp {
 				.then(c => c.forListSelection(data => this._onRespondForListSelection(data)))
 			, debug)
 		);
+	}
+
+	presentList(convo, type, list, paging) {
+		return convo.setList(type, list, paging)
+			.forListPage(data => this._onRespondForList(data));
 	}
 
 	onListSelectUI(convo, type, itemName) {
