@@ -139,6 +139,11 @@ class ConvoApp {
 			.forListPage(data => this._onRespondForList(data));
 	}
 
+	presentSelection(convo, type, item) {
+		return convo.select(type, item)
+			.forSelection(data => this.onRespondForSelection(data));
+	}
+
 	onListSelectUI(convo, type, itemName) {
 		return convo.selectFromListPage(ConvoApp.ensureNumber(itemName.split('_')[1]));
 	}
@@ -166,6 +171,10 @@ class ConvoApp {
 	}
 
 	onRespondForListSelection({ convo, type, item }) {
+		return this.onRespondForSelection({ convo, type, item });
+	}
+
+	onRespondForSelection({ convo, type, item }) {
 		return convo.speak('Nothing was selected');
 	}
 

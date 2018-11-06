@@ -610,6 +610,43 @@ describe('Convo', () => {
 		});
 	});
 
+	describe('#select', () => {
+		it('Should select an item and report back on it.', () => {
+			let convo = new Convo().select('thing', { value: 'the thing' });
+			assert(convo.hasSelection());
+			assert(convo.hasSelection('thing'));
+			assert(convo.getSelection().item.value === 'the thing');
+		});
+		it('Should respond back negatively when there is no selection.', () => {
+			let convo = new Convo();
+			assert(!convo.hasSelection());
+			assert(!convo.hasSelection('thing'));
+			assert(convo.getSelection() === null);
+		});
+		it('Should be able to discriminate on types.', () => {
+			let convo = new Convo().select('thing', { value: 'the thing' });
+			assert(convo.hasSelection());
+			assert(!convo.hasSelection('thing2'));
+		});
+		it('Should be able to clear selection.', () => {
+			let convo = new Convo().select('thing', { value: 'the thing' });
+			assert(convo.hasSelection());
+			assert(convo.hasSelection('thing'));
+			assert(convo.getSelection().item.value === 'the thing');
+			convo.clearSelection();
+			assert(!convo.hasSelection());
+			assert(!convo.hasSelection('thing'));
+			assert(convo.getSelection() === null);
+		});
+		it('Should be to present selection.', () => {
+			let convo = new Convo().select('thing', { value: 'the thing' });
+			convo.forSelection(({ type, item }) => {
+				assert(type === 'thing');
+				assert(item.value === 'the thing');
+			});
+		});
+	});
+
 	describe('#setList', () => {
 		it('Should throw an error if a type or a list is not passed.', () => {
 			assert.throws(() => new Convo().setList());
@@ -1156,6 +1193,29 @@ describe('Convo', () => {
 				convo.getListSelection() && convo.getListSelection().index === 0 && convo.getListSelection().item === 'item 1',
 				`there should not be a selection.${JSON.stringify(convo.getListSelection(), null, 2)}`
 			);
+		});
+		it('Should have list selection and selection match when selection is from list.', () => {
+			let convo = new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3'])
+				.selectFromList(0);
+			assert(
+				convo.getListSelection().item === convo.getSelection().item,
+				`there should not be a selection.${JSON.stringify(convo.getListSelection(), null, 2)}`
+			);
+		});
+		it('Should not have list selection and selection match when selection is not from list.', () => {
+			let convo = new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3'])
+				.selectFromList(0)
+				.select('thing', 'item 4');
+			assert(convo.getListSelection().item !== convo.getSelection().item);
+		});
+		it('Should have list section override a direct selection.', () => {
+			let convo = new Convo()
+				.setList('items', ['item 1', 'item 2', 'item 3'])
+				.select('thing', 'item 4')
+				.selectFromList(0);
+			assert(convo.getListSelection().item === convo.getSelection().item);
 		});
 	});
 

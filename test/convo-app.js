@@ -241,6 +241,27 @@ describe('ConvoApp', () => {
 		});
 	});
 
+	describe('#presentSelection', () => {
+		it('Should call onRespondForSelection when selection is presented', (done) => {
+			class MyApp extends ConvoApp {
+				onRegisterIntents(){
+					this.registerIntent('selectThing', (convo, params, option) => Convo.ask(
+						this.presentSelection(convo, 'thing', { value: 'test' })
+					));
+				}
+				onRespondForSelection({ convo, type, item }) {
+					assert(convo);
+					assert(type === 'thing');
+					assert(item);
+					assert(item.value === 'test');
+					done();
+				}
+
+			}
+			new MyApp().intent(new Convo(), 'selectThing');
+		});
+	});
+
 	describe('#registerListIntents', () => {
 		it('Should be able to repeat the list with list_repeat', (done) => {
 			let list = ['test 1', 'test 2', 'test 3', 'test 4', 'test 5'];
@@ -608,7 +629,7 @@ describe('ConvoApp', () => {
 						listLength: list.length
 					}));
 				}
-				onRespondForListSelection({ convo, type, item }) {
+				onRespondForSelection({ convo, type, item }) {
 					return convo.speak(JSON.stringify({
 						type,
 						item
@@ -645,7 +666,7 @@ describe('ConvoApp', () => {
 						listLength: list.length
 					}));
 				}
-				onRespondForListSelection({ convo, type, item }) {
+				onRespondForSelection({ convo, type, item }) {
 					return convo.speak(JSON.stringify({
 						type,
 						item
@@ -682,7 +703,7 @@ describe('ConvoApp', () => {
 						listLength: list.length
 					}));
 				}
-				onRespondForListSelection({ convo, type, item }) {
+				onRespondForSelection({ convo, type, item }) {
 					return convo.speak(JSON.stringify({
 						type,
 						item
@@ -719,7 +740,7 @@ describe('ConvoApp', () => {
 						listLength: list.length
 					}));
 				}
-				onRespondForListSelection({ convo, type, item }) {
+				onRespondForSelection({ convo, type, item }) {
 					return convo.speak(JSON.stringify({
 						type,
 						item
@@ -788,7 +809,7 @@ describe('ConvoApp', () => {
 						listLength: list.length
 					}));
 				}
-				onRespondForListSelection({ convo, type, item }) {
+				onRespondForSelection({ convo, type, item }) {
 					return convo.speak(JSON.stringify({
 						type,
 						item

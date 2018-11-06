@@ -414,6 +414,36 @@ class Convo {
 		return this;
 	}
 
+	getSelection(type) {
+		return this.getContext('selection');
+	}
+
+	hasSelection(type) {
+		return this.getContext('selection') && (!type || this.getContext('selection').type === type);
+	}
+
+	clearSelection() {
+		let selection = this.getSelection();
+		if (selection) {
+			this.setContext('selection', 0, null);
+			this.setContext(`selected_${selection.type}`, 0, null);
+		}
+	}
+
+	select(type, item) {
+		this.setContext('selection', 10, { type, item });
+		this.setContext(`selected_${type}`, 10, { active: true });
+		return this;
+	}
+
+	forSelection(func) {
+		if (this.hasSelection()) {
+			let { item, type } = this.getSelection();
+			func({ convo: this, item, type });
+		}
+		return this;
+	}
+
 	selectFromList(index = 0){
 		if (!this.hasList()) {
 			throw new Error('Can\'t select an item if there\'s no list.');
@@ -427,7 +457,7 @@ class Convo {
 		}
 		listContext.selectedIndex = index;
 		this.setContext('list', 10, listContext);
-		this.setContext(`list_select_${listContext.type}`, 10, { active: true });
+		this.select(listContext.type, listContext.list[listContext.selectedIndex]);
 		return this;
 	}
 
@@ -458,7 +488,7 @@ class Convo {
 		let listContext = this.getContext('list');
 		if (listContext) {
 			this.getContext('list').selectedIndex = -1;
-			this.setContext(`list_select_${listContext.type}`, 0, null);
+			this.clearSelection();
 		}
 		return this;
 	}
