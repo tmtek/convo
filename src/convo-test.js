@@ -29,6 +29,32 @@ class ConvoTest {
 		})
 			.then(() => !isDone && done());
 	}
+	static containsSpokenText(requests, pattern) {
+		if (!requests) {
+			throw new Error('Requests were not supplied.');
+		}
+		if (!pattern) {
+			return false;
+		}
+		return requests
+			.filter(request => request.payload.type === 'SimpleResponse')
+			.map(request => new RegExp(pattern).test(request.payload.data.speech))
+			.filter(val => val)
+			.length > 0;
+	}
+	static containsWrittenText(requests, pattern) {
+		if (!requests) {
+			throw new Error('Requests were not supplied.');
+		}
+		if (!pattern) {
+			return false;
+		}
+		return requests
+			.filter(request => request.payload.type === 'SimpleResponse')
+			.map(request => new RegExp(pattern).test(request.payload.data.text))
+			.filter(val => val)
+			.length > 0;
+	}
 }
 
 module.exports = { ConvoTest };
