@@ -11,10 +11,6 @@ class ConvoStorage {
 
 	load(callback) {
 		return new Promise((resolve, reject) => {
-			if (!this._filename) {
-				resolve({});
-				return;
-			}
 			fs.readFile(this._filename, 'utf8', (error, data) => {
 				!error ? resolve(JSON.parse(data)) : resolve({});
 			});
@@ -27,9 +23,6 @@ class ConvoStorage {
 	}
 
 	write(storage) {
-		if (!this._filename) {
-			return;
-		}
 		fs.writeFile(this._filename, JSON.stringify(storage, null, 2), error => {});
 	}
 }

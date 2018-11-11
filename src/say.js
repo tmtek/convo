@@ -46,14 +46,6 @@ class Say {
 		return this;
 	}
 
-	newline() {
-		return this.append('\n');
-	}
-
-	paragraph() {
-		return this.newline().newline();
-	}
-
 	sentence(val) {
 		return this.append(' ').append(val);
 	}

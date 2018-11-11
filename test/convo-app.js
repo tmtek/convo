@@ -47,6 +47,11 @@ describe('ConvoApp', () => {
 	});
 
 	describe('#constructor', () => {
+		
+		it('Should call instantiate without error', () => {
+			assert.doesNotThrow(() => new ConvoApp());
+		});
+		
 		it('Should call onRegisterItents after construction', (done) => {
 			class MyApp extends ConvoApp {
 				onRegisterIntents() {
@@ -198,7 +203,9 @@ describe('ConvoApp', () => {
 		});
 	});
 
+	
 	describe('#presentList', () => {
+		
 		it('Should call onRespondForList when list is presented with no paging', (done) => {
 			let list = ['test 1', 'test 2', 'test 3', 'test 4', 'test 5'];
 			class MyApp extends ConvoApp {
@@ -239,6 +246,14 @@ describe('ConvoApp', () => {
 			}
 			new MyApp().intent(new Convo(), 'applyList');
 		});
+		it('Should have onRespondForList return a default statement', (done) => {
+			assert.doesNotThrow(() => new ConvoApp().onRespondForList({convo:new Convo()}));
+			ConvoTest.testConversation(
+			Convo.ask(new ConvoApp().onRespondForList({convo:new Convo()}))
+			.then(({app, convo, requests}) => {
+				assert(ConvoTest.containsResponseType(requests, ['SimpleResponse']));
+			}), done)
+		});
 	});
 
 	describe('#presentSelection', () => {
@@ -259,6 +274,20 @@ describe('ConvoApp', () => {
 
 			}
 			new MyApp().intent(new Convo(), 'selectThing');
+		});
+		it('Should return a default statement from onRespondForSelection', (done) => {
+			assert.doesNotThrow(() => new ConvoApp().onRespondForSelection({convo:new Convo()}));
+			ConvoTest.testConversation(
+			Convo.ask(new ConvoApp().onRespondForSelection({convo:new Convo()}))
+			.then(({app, convo, requests}) => {
+				assert(ConvoTest.containsResponseType(requests, ['SimpleResponse']));
+			}), done)
+		});
+	});
+
+	describe('#onQueryListForSelection', () => {
+		it('Should return false by default', () => {
+			assert(!new ConvoApp().onQueryListForSelection(new Convo()));
 		});
 	});
 
@@ -861,6 +890,49 @@ describe('ConvoApp', () => {
 				})
 			, done);
 		});
+		it('Should call onQueryListForSelection() for every list item when list_find is called.', (done) => {
+			let inc = 0;
+			let list = ['thing 1', 'thing 2', 'thing 3'];
+			class MyApp extends ConvoApp {
+				onRegisterIntents(){
+					this.registerListIntents();
+				}
+				onQueryListForSelection(type, item, query) {
+					assert(type ==='thing');
+					assert(query ==='2');
+					if (inc == list.length -1) {
+						done();
+					} else {
+						inc++;
+					}
+					
+				}
+
+			}
+			let startConvo = new Convo().setList('thing', list);
+			new MyApp().intent(startConvo, 'list_find', { query:'2'});
+		});
+		it('Should find use onQueryListForSelection and list_find to select an item.', (done) => {
+			let inc = 0;
+			let list = ['thing 1', 'thing 2', 'thing 3'];
+			class MyApp extends ConvoApp {
+				onRegisterIntents(){
+					this.registerListIntents();
+				}
+				onQueryListForSelection(type, item, query) {
+					let val = item.indexOf(query) > -1;
+					return val;
+				}
+				onRespondForSelection({ convo, type, item }) {
+					return convo.speak(item);
+				}
+			}
+			let startConvo = new Convo().setList('thing', list);
+			ConvoTest.testConversation(new MyApp().intent(startConvo, 'list_find', { query:'2'}, null, {log:false})
+			.then(({app, convo, requests}) => {
+				assert(ConvoTest.containsSpokenText(requests, 'thing 2'));
+			}), done);
+		});
 	});
 
 	describe('#registerHelpIntent', () => {
@@ -907,6 +979,154 @@ describe('ConvoApp', () => {
 					return { app, convo, requests };
 				})
 			, done);
+		});
+
+		it('Should let us know that we do not have help when we request it and it hasn\'t been defined', (done) => {
+			class MyApp extends ConvoApp {
+				onRegisterIntents(){
+					this.registerListIntents();
+					this.registerHelpIntent();
+				}
+			}
+			ConvoTest.testConversation(new MyApp()
+				.intent(new Convo(), 'help')
+				.then(({ app, convo, requests }) => {
+					assert(!convo.hasList('help'));
+					assert(ConvoTest.containsResponseType(requests, ['SimpleResponse']));
+				})
+			, done);
+		});
+
+		it('Should call respondForHelp topic when help topic is selected from list.', (done) => {
+			class MyApp extends ConvoApp {
+				onRegisterIntents(){
+					this.registerListIntents();
+					this.registerHelpIntent();
+				}
+				onPrepareHelp() {
+					return [
+						{
+							description: 'help 1',
+							tips: [
+								{ text: 'tip 1' },
+								{ text: 'tip 2' },
+								{ text: 'tip 3' }
+							]
+						},
+						{
+							description: 'help 2',
+							tips: [
+								{ text: 'tip 1' },
+								{ text: 'tip 2' },
+								{ text: 'tip 3' }
+							]
+						},
+						{
+							description: 'help 3',
+							tips: [
+								{ text: 'tip 1' },
+								{ text: 'tip 2' },
+								{ text: 'tip 3' }
+							]
+						}
+					];
+				}
+				respondForHelpTopic({ convo, type, item }, inListContext = true) {
+					assert(type === 'help');
+					assert(item);
+					assert(item.description === 'help 1');
+					assert(inListContext);
+					done();
+				}
+			}
+			new MyApp()
+				.intent(new Convo(), 'help')
+				.then(({ app, convo, requests }) => {
+					app.intent(new Convo(convo),'list_select', {index:1}, null, {log:false})
+				});
+		});
+
+		it('Should call return an expected result for respondForHelp be default.', (done) => {
+			class MyApp extends ConvoApp {
+				onRegisterIntents(){
+					this.registerListIntents();
+					this.registerHelpIntent();
+				}
+				onPrepareHelp() {
+					return [
+						{
+							description: 'help 1',
+							tips: [
+								{ text: 'tip 1' },
+								{ text: 'tip 2' },
+								{ text: 'tip 3' }
+							]
+						},
+						{
+							description: 'help 2',
+							tips: [
+								{ text: 'tip 1' },
+								{ text: 'tip 2' },
+								{ text: 'tip 3' }
+							]
+						},
+						{
+							description: 'help 3',
+							tips: [
+								{ text: 'tip 1' },
+								{ text: 'tip 2' },
+								{ text: 'tip 3' }
+							]
+						}
+					];
+				}
+			}
+			ConvoTest.testConversation(new MyApp()
+				.intent(new Convo(), 'help')
+				.then(({ app, convo, requests }) => 
+					app.intent(new Convo(convo),'list_select', {index:1}, null, {log:false})
+				)
+				.then(({ app, convo, requests }) => {
+					assert(ConvoTest.containsResponseType(requests, ['SimpleResponse', 'List']));
+					assert(ConvoTest.containsSpokenText(requests, 'help 1'));
+					assert(ConvoTest.containsSpokenText(requests, 'tip 1'));
+					assert(ConvoTest.containsSpokenText(requests, 'tip 2'));
+					assert(ConvoTest.containsSpokenText(requests, 'tip 3'));
+				})
+			, done);
+		});
+
+		it('Should call respondForHelp topic when there is only one help topic.', (done) => {
+			class MyApp extends ConvoApp {
+				onRegisterIntents(){
+					this.registerListIntents();
+					this.registerHelpIntent();
+				}
+				onPrepareHelp() {
+					return [
+						{
+							description: 'help 1',
+							tips: [
+								{ text: 'tip 1' },
+								{ text: 'tip 2' },
+								{ text: 'tip 3' }
+							]
+						}
+					];
+				}
+				respondForHelpTopic({ convo, type, item }, inListContext = true) {
+					assert(type === 'help');
+					assert(item);
+					assert(item.description === 'help 1');
+					assert(!inListContext);
+					done();
+				}
+			}
+			new MyApp()
+				.intent(new Convo(), 'help')
+				.then(({ app, convo, requests }) => {
+					app.intent(new Convo(convo),'list_select', {index:1}, null, {log:false})
+				});
 		});
 	});
 

@@ -38,6 +38,40 @@ describe('ConvoTest', () => {
 			assert(!ConvoTest.containsResponseType(requests));
 		});
 	});
+	describe('#containstext', () => {
+		it('Should return true if text and speech is in request.', () => {
+			let requests = [
+				{ action: 'ask', payload: { type: 'SimpleResponse', data:{text:'the text', speech:'the speech'} } },
+			];
+			assert(ConvoTest.containsWrittenText(requests, 'text'));
+			assert(ConvoTest.containsSpokenText(requests, 'speech'));
+		});
+		it('Should return false if text and speech is not in request.', () => {
+			let requests = [
+				{ action: 'ask', payload: { type: 'SimpleResponse', data:{text:'the text', speech:'the speech'} } },
+			];
+			assert(!ConvoTest.containsWrittenText(requests, 'one'));
+			assert(!ConvoTest.containsSpokenText(requests, 'two'));
+		});
+		it('Should throw error if requests are null.', () => {
+			assert.throws(() => ConvoTest.containsWrittenText(null, 'one'));
+			assert.throws(() => ConvoTest.containsSpokenText(null, 'two'));
+		});
+		it('Should return true if no queries are submitted but there is text and speech.', () => {
+			let requests = [
+				{ action: 'ask', payload: { type: 'SimpleResponse', data:{text:'the text', speech:'the speech'} } },
+			];
+			assert(ConvoTest.containsWrittenText(requests));
+			assert(ConvoTest.containsSpokenText(requests));
+		});
+		it('Should return false if no queries are submitted and there is no text and speech.', () => {
+			let requests = [
+				{ action: 'ask', payload: { type: 'SimpleResponse', data:{} } },
+			];
+			assert(!ConvoTest.containsWrittenText(requests));
+			assert(!ConvoTest.containsSpokenText(requests));
+		});
+	});
 	describe('#isConversationClose', () => {
 		it('Should return false if the requests are asks.', () => {
 			let requests = [

@@ -33,12 +33,15 @@ class ConvoTest {
 		if (!requests) {
 			throw new Error('Requests were not supplied.');
 		}
-		if (!pattern) {
-			return false;
-		}
+	
 		return requests
 			.filter(request => request.payload.type === 'SimpleResponse')
-			.map(request => new RegExp(pattern).test(request.payload.data.speech))
+			.map(request => {
+				return!pattern ? 
+				request.payload.data.speech
+				:
+				 new RegExp(pattern).test(request.payload.data.speech)
+			})
 			.filter(val => val)
 			.length > 0;
 	}
@@ -46,12 +49,14 @@ class ConvoTest {
 		if (!requests) {
 			throw new Error('Requests were not supplied.');
 		}
-		if (!pattern) {
-			return false;
-		}
 		return requests
 			.filter(request => request.payload.type === 'SimpleResponse')
-			.map(request => new RegExp(pattern).test(request.payload.data.text))
+			.map(request => {
+				return!pattern ? 
+				request.payload.data.text
+				:
+				 new RegExp(pattern).test(request.payload.data.text)
+			})
 			.filter(val => val)
 			.length > 0;
 	}

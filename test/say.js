@@ -43,6 +43,13 @@ describe('Say', () => {
 			assert(r3 === 'item 4, item 5 and 1 other.', r3);
 
 		});
+		it('Should output an empty message', () => {
+			let list = [];
+			assert(Say.listPageResponse() === 'The list is empty.');
+			assert(Say.listPageResponse({}) === 'The list is empty.');
+			assert(Say.listPageResponse({}, {}) === 'The list is empty.');
+			assert(Say.listPageResponse({}, {}, list) === 'The list is empty.');
+		});
 	});
 
 	describe('#listItems', () => {
@@ -58,6 +65,15 @@ describe('Say', () => {
 			assert(listItems.listitem_4 && listItems.listitem_4.title === 'item 4');
 			assert(listItems.listitem_5 && listItems.listitem_5.title === 'item 5');
 			assert(listItems.listitem_6 && listItems.listitem_6.title === 'item 6');
+		});
+	});
+
+	describe('#general', () => {
+		it('Should construct a Say from append()', () => {
+			assert(Say.append("test").toString() === 'test');
+		});
+		it('Should construct a Say from sentence()', () => {
+			assert(Say.sentence("test").toString() === 'test');
 		});
 	});
 });

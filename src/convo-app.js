@@ -18,7 +18,6 @@ class ConvoApp {
 	}
 
 	constructor() {
-		//this.registeredIntents = [];
 		this.registeredIntents = {};
 		this.onRegisterIntents();
 		this._help = this.onPrepareHelp();
@@ -180,7 +179,7 @@ class ConvoApp {
 
 	registerHelpIntent() {
 		this.registerIntent('help', (convo, params, option, debug) => {
-			if (this._help) {
+			if (this._help && this._help.length > 0) {
 				if (this._help.length > 1) {
 					return Convo.ask(convo
 						.setList('help', this._help, { start: 0, count: -1 })

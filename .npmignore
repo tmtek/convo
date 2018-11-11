@@ -3,3 +3,4 @@ mock.js
 fulfillment_template.js
 .DS_Store
 /test/test-storage-write.json
+.nyc_output/

@@ -7,3 +7,4 @@
 yarn.lock
 /.vscode
 /test/test-storage-write.json
+.nyc_output/
